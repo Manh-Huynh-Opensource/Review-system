@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore'
 
-export type FileType = 'image' | 'video' | 'model'
+export type FileType = 'image' | 'video' | 'model' | 'sequence'
 export type ProjectStatus = 'active' | 'archived'
 
 export interface Client {
@@ -34,6 +34,8 @@ export interface FileVersion {
   url: string
   version: number
   uploadedAt: Timestamp
+  sequenceUrls?: string[] // For image sequences
+  frameCount?: number // Number of frames in sequence
   metadata: {
     size: number
     type: string
@@ -52,6 +54,7 @@ export interface File {
   type: FileType
   versions: FileVersion[]
   currentVersion: number
+  sequenceViewMode?: 'video' | 'carousel' // Admin-set view mode for sequences
   createdAt: Timestamp
 }
 

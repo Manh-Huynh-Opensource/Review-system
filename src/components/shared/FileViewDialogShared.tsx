@@ -18,7 +18,8 @@ import {
   Box,
   ChevronDown,
   MessageSquare,
-  Upload
+  Upload,
+  Film
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -28,6 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { AddComment } from '@/components/comments/AddComment'
 import { CommentsList } from '@/components/comments/CommentsList'
+import { ImageSequenceViewer } from '@/components/viewers/ImageSequenceViewer'
 
 const GLBViewer = lazy(() => import('@/components/viewers/GLBViewer').then(m => ({ default: m.GLBViewer })))
 
@@ -39,17 +41,20 @@ interface Props {
   onOpenChange: (open: boolean) => void
   onSwitchVersion?: (fileId: string, version: number) => void
   onUploadNewVersion?: (file: File, existingFileId: string) => Promise<void>
+  onSequenceViewModeChange?: (fileId: string, mode: 'video' | 'carousel') => Promise<void>
   comments: any[]
   currentUserName: string
   onUserNameChange: (name: string) => void
   onAddComment: (userName: string, content: string, timestamp?: number, parentCommentId?: string) => Promise<void>
   onResolveToggle?: (commentId: string, isResolved: boolean) => void
+  isAdmin?: boolean
 }
 
 const getFileTypeIcon = (type: string) => {
   if (type === 'image') return <FileImage className="w-5 h-5 text-green-500" />
   if (type === 'video') return <Video className="w-5 h-5 text-blue-500" />
   if (type === 'model') return <Box className="w-5 h-5 text-purple-500" />
+  if (type === 'sequence') return <Film className="w-5 h-5 text-orange-500" />
   return <FileImage className="w-5 h-5 text-gray-500" />
 }
 
@@ -57,6 +62,7 @@ const getFileTypeLabel = (type: string) => {
   if (type === 'image') return 'Hình ảnh'
   if (type === 'video') return 'Video'
   if (type === 'model') return 'Mô hình 3D'
+  if (type === 'sequence') return 'Image Sequence'
   return 'Tệp tin'
 }
 
@@ -68,14 +74,17 @@ export function FileViewDialogShared({
   onOpenChange, 
   onSwitchVersion,
   onUploadNewVersion,
+  onSequenceViewModeChange,
   comments,
   currentUserName,
   onUserNameChange,
   onAddComment,
-  onResolveToggle
+  onResolveToggle,
+  isAdmin = false
 }: Props) {
   const [showComments, setShowComments] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
+  const [currentFrame, setCurrentFrame] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [currentVersion, setCurrentVersion] = useState(file?.currentVersion || 1)
@@ -100,9 +109,12 @@ export function FileViewDialogShared({
   const fileComments = comments.filter(c => c.fileId === file.id && c.version === currentVersion)
 
   const handleTimestampClick = (timestamp: number) => {
-    if (videoRef.current) {
+    if (file.type === 'video' && videoRef.current) {
       videoRef.current.currentTime = timestamp
       videoRef.current.play()
+    } else if (file.type === 'sequence') {
+      // For sequences, timestamp represents frame number
+      setCurrentFrame(Math.floor(timestamp))
     }
   }
 
@@ -127,6 +139,28 @@ export function FileViewDialogShared({
             className="w-full h-auto max-h-[70vh] object-contain mx-auto"
           />
         </div>
+      )
+    }
+
+    if (file.type === 'sequence') {
+      const sequenceUrls = current?.sequenceUrls || []
+      const fps = current?.metadata?.duration && current?.frameCount 
+        ? Math.round(current.frameCount / current.metadata.duration) 
+        : 24
+
+      return (
+        <ImageSequenceViewer 
+          urls={sequenceUrls}
+          fps={fps}
+          onFrameChange={(frame) => setCurrentFrame(frame)}
+          defaultViewMode={file.sequenceViewMode || 'video'}
+          isAdmin={isAdmin}
+          onViewModeChange={(mode) => {
+            if (isAdmin && onSequenceViewModeChange) {
+              onSequenceViewModeChange(file.id, mode)
+            }
+          }}
+        />
       )
     }
 
@@ -322,12 +356,14 @@ export function FileViewDialogShared({
                   ) : (
                     <CommentsList
                       comments={fileComments}
-                      onTimestampClick={file.type === 'video' ? handleTimestampClick : undefined}
+                      onTimestampClick={(file.type === 'video' || file.type === 'sequence') ? handleTimestampClick : undefined}
                       onResolveToggle={onResolveToggle}
                       onReply={async (parentId, userName, content) => {
-                        await onAddComment(userName, content, file.type === 'video' ? currentTime : undefined, parentId)
+                        const timestamp = file.type === 'video' ? currentTime : file.type === 'sequence' ? currentFrame : undefined
+                        await onAddComment(userName, content, timestamp, parentId)
                       }}
                       currentUserName={currentUserName}
+                      isSequence={file.type === 'sequence'}
                     />
                   )}
                 </div>
@@ -338,8 +374,9 @@ export function FileViewDialogShared({
                     userName={currentUserName}
                     onUserNameChange={onUserNameChange}
                     onSubmit={onAddComment}
-                    currentTimestamp={file.type === 'video' ? currentTime : undefined}
-                    showTimestamp={file.type === 'video'}
+                    currentTimestamp={file.type === 'video' ? currentTime : file.type === 'sequence' ? currentFrame : undefined}
+                    showTimestamp={file.type === 'video' || file.type === 'sequence'}
+                    isSequence={file.type === 'sequence'}
                   />
                 </div>
               </>

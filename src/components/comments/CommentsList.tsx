@@ -13,6 +13,7 @@ interface CommentsListProps {
   onTimestampClick?: (timestamp: number) => void
   onReply?: (parentCommentId: string, userName: string, content: string) => Promise<void>
   currentUserName?: string
+  isSequence?: boolean
 }
 
 export function CommentsList({ 
@@ -20,7 +21,8 @@ export function CommentsList({
   onResolveToggle, 
   onTimestampClick,
   onReply,
-  currentUserName = ''
+  currentUserName = '',
+  isSequence = false
 }: CommentsListProps) {
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyContent, setReplyContent] = useState('')
@@ -95,10 +97,13 @@ export function CommentsList({
                   size="sm"
                   onClick={() => onTimestampClick(comment.timestamp!)}
                   className="h-7 px-2 text-xs gap-1"
-                  title="Phát từ timestamp này"
+                  title={isSequence ? "Chuyển đến frame này" : "Phát từ timestamp này"}
                 >
                   <Clock className="w-3 h-3" />
-                  {Math.floor(comment.timestamp / 60)}:{String(Math.floor(comment.timestamp % 60)).padStart(2, '0')}
+                  {isSequence 
+                    ? `Frame ${Math.floor(comment.timestamp) + 1}`
+                    : `${Math.floor(comment.timestamp / 60)}:${String(Math.floor(comment.timestamp % 60)).padStart(2, '0')}`
+                  }
                 </Button>
               )}
               {onReply && (

@@ -10,6 +10,7 @@ interface AddCommentProps {
   showTimestamp?: boolean
   userName?: string
   onUserNameChange?: (name: string) => void
+  isSequence?: boolean // For image sequences, timestamp is frame number
 }
 
 export function AddComment({ 
@@ -17,7 +18,8 @@ export function AddComment({
   currentTimestamp, 
   showTimestamp = false,
   userName: initialUserName,
-  onUserNameChange 
+  onUserNameChange,
+  isSequence = false
 }: AddCommentProps) {
   const [userName, setUserName] = useState(initialUserName || '')
   const [content, setContent] = useState('')
@@ -50,6 +52,9 @@ export function AddComment({
 
   const formatTime = (seconds?: number) => {
     if (seconds === undefined || seconds === null) return ''
+    if (isSequence) {
+      return `Frame ${Math.floor(seconds) + 1}`
+    }
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
     return `${mins}:${secs.toString().padStart(2, '0')}`

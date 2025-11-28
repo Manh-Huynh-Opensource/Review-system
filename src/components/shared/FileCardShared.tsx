@@ -4,7 +4,7 @@ import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { FileImage, Video, Box, MessageSquare, Clock, Trash2 } from 'lucide-react'
+import { FileImage, Video, Box, MessageSquare, Clock, Trash2, Film } from 'lucide-react'
 
 interface Props {
   file: FileType
@@ -20,6 +20,7 @@ const getFileTypeIcon = (type: string, size: string = 'w-8 h-8') => {
   if (type === 'image') return <FileImage className={`${size} text-green-500`} />
   if (type === 'video') return <Video className={`${size} text-blue-500`} />
   if (type === 'model') return <Box className={`${size} text-purple-500`} />
+  if (type === 'sequence') return <Film className={`${size} text-orange-500`} />
   return <FileImage className={`${size} text-gray-500`} />
 }
 
@@ -27,6 +28,7 @@ const getFileTypeLabel = (type: string) => {
   if (type === 'image') return 'Hình ảnh'
   if (type === 'video') return 'Video'
   if (type === 'model') return 'Mô hình 3D'
+  if (type === 'sequence') return 'Image Sequence'
   return 'Tệp tin'
 }
 
@@ -45,6 +47,24 @@ export function FileCardShared({ file, resolvedUrl, commentCount, onClick, onDel
           className="w-full h-full object-cover"
           onError={() => setImageError(true)}
         />
+      )
+    }
+
+    if (file.type === 'sequence' && effectiveUrl && !imageError) {
+      // Show first frame as thumbnail for sequences
+      return (
+        <div className="relative w-full h-full">
+          <img
+            src={effectiveUrl}
+            alt={file.name}
+            className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
+          />
+          <div className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
+            <Film className="w-3 h-3" />
+            {current?.frameCount || 0} frames
+          </div>
+        </div>
       )
     }
 

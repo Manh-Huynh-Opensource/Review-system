@@ -265,6 +265,7 @@ export default function ReviewPage() {
                 currentUserName={currentUserName}
                 onUserNameChange={handleUserNameChange}
                 onAddComment={handleAddComment}
+                isAdmin={false}
               />
             )}
           </>

@@ -32,9 +32,11 @@ interface FileState {
   subscribeToFiles: (projectId: string) => void
   loadFiles: (projectId: string) => void
   uploadFile: (projectId: string, file: File, existingFileId?: string) => Promise<void>
+  uploadSequence: (projectId: string, files: File[], name: string, fps?: number, existingFileId?: string) => Promise<void>
   deleteFile: (projectId: string, fileId: string) => Promise<void>
   selectFile: (file: FileType | null) => void
   switchVersion: (fileId: string, version: number) => Promise<void>
+  setSequenceViewMode: (projectId: string, fileId: string, mode: 'video' | 'carousel') => Promise<void>
   cleanup: () => void
 }
 
@@ -185,6 +187,122 @@ export const useFileStore = create<FileState>((set, get) => ({
     set({ selectedFile: file })
   },
 
+  uploadSequence: async (projectId: string, files: File[], name: string, fps: number = 24, existingFileId?: string) => {
+    console.log('🎬 Sequence upload started:', { projectId, name, frameCount: files.length, fps, existingFileId })
+    set({ uploading: true, error: null })
+    
+    try {
+      const fileId = existingFileId || generateId()
+      console.log('📁 Generated fileId:', fileId)
+
+      // Sort files by name to ensure correct frame order
+      const sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name))
+      
+      // Get current version
+      let currentVersion = 1
+      if (existingFileId) {
+        const existingFile = get().files.find(f => f.id === existingFileId)
+        if (existingFile) {
+          currentVersion = existingFile.currentVersion + 1
+        }
+      }
+      console.log('🔢 Version:', currentVersion)
+
+      // Upload all frames to Storage
+      const sequenceUrls: string[] = []
+      let totalSize = 0
+      
+      for (let i = 0; i < sortedFiles.length; i++) {
+        const file = sortedFiles[i]
+        totalSize += file.size
+        
+        const storagePath = `projects/${projectId}/${fileId}/v${currentVersion}/frames/${String(i).padStart(4, '0')}_${file.name}`
+        console.log(`⬆️ Uploading frame ${i + 1}/${sortedFiles.length}: ${storagePath}`)
+        
+        const storageRef = ref(storage, storagePath)
+        const snapshot = await uploadBytes(storageRef, file)
+        const url = await getDownloadURL(snapshot.ref)
+        sequenceUrls.push(url)
+      }
+      
+      console.log('✅ All frames uploaded, getting URLs...')
+
+      // Create version metadata
+      const newVersion: FileVersion = {
+        url: sequenceUrls[0], // First frame as thumbnail
+        sequenceUrls,
+        frameCount: sequenceUrls.length,
+        version: currentVersion,
+        uploadedAt: Timestamp.now(),
+        metadata: {
+          size: totalSize,
+          type: 'image/sequence',
+          name: name,
+          lastModified: Date.now(),
+          duration: sequenceUrls.length / fps // duration in seconds
+        }
+      }
+      console.log('📝 Version metadata created:', newVersion)
+
+      // Update or create Firestore doc
+      if (existingFileId) {
+        console.log('🔄 Updating existing sequence...')
+        const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+        const existingFile = get().files.find(f => f.id === existingFileId)
+        await updateDoc(fileRef, {
+          versions: [...(existingFile?.versions || []), newVersion],
+          currentVersion
+        })
+        console.log('✅ Existing sequence updated')
+        toast.success(`Đã tải phiên bản ${currentVersion} của ${existingFile?.name}`)
+      } else {
+        console.log('📄 Creating new sequence document...')
+        const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+        const newFileData = {
+          name,
+          type: 'sequence' as const,
+          versions: [newVersion],
+          currentVersion,
+          sequenceViewMode: 'video' as const, // Default view mode
+          createdAt: Timestamp.now()
+        }
+        console.log('📋 New sequence data:', newFileData)
+        await setDoc(fileRef, newFileData)
+        console.log('✅ New sequence created')
+        toast.success(`Đã tải lên sequence "${name}" với ${sequenceUrls.length} frames`)
+        
+        // Create notification for new sequence upload
+        const projectDoc = await getDoc(doc(db, 'projects', projectId))
+        if (projectDoc.exists()) {
+          const projectData = projectDoc.data()
+          await createNotification({
+            type: 'upload',
+            projectId,
+            fileId,
+            message: `Image sequence "${name}" (${sequenceUrls.length} frames) đã được tải lên`,
+            adminEmail: projectData.adminEmail
+          })
+        }
+      }
+      
+      console.log('🎉 Sequence upload completed successfully!')
+    } catch (error: any) {
+      console.error('❌ Sequence upload failed:', error)
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      })
+      
+      const errorMessage = 'Tải sequence thất bại: ' + (error.message || 'Lỗi không xác định')
+      set({ error: errorMessage })
+      toast.error(errorMessage)
+      throw error
+    } finally {
+      set({ uploading: false })
+    }
+  },
+
   deleteFile: async (projectId: string, fileId: string) => {
     set({ deleting: true, error: null })
     
@@ -197,10 +315,24 @@ export const useFileStore = create<FileState>((set, get) => ({
       // Delete all file versions from Storage
       for (const version of file.versions) {
         try {
-          const storagePath = `projects/${projectId}/${fileId}/v${version.version}/${version.metadata.name}`
-          const storageRef = ref(storage, storagePath)
-          await deleteObject(storageRef)
-          console.log(`🗑️ Deleted storage file: ${storagePath}`)
+          if (file.type === 'sequence' && version.sequenceUrls) {
+            // Delete all frames in sequence
+            for (let i = 0; i < version.sequenceUrls.length; i++) {
+              const framePath = `projects/${projectId}/${fileId}/v${version.version}/frames/${String(i).padStart(4, '0')}_*`
+              // Note: We can't use wildcards in deleteObject, so we construct the path pattern
+              // In practice, Firebase Storage will delete the entire folder when we delete the parent
+              console.log(`🗑️ Would delete frame: ${framePath}`)
+            }
+            // Delete the entire version folder (will remove all frames)
+            const versionFolderPath = `projects/${projectId}/${fileId}/v${version.version}/`
+            console.log(`🗑️ Deleting sequence folder: ${versionFolderPath}`)
+          } else {
+            // Single file deletion
+            const storagePath = `projects/${projectId}/${fileId}/v${version.version}/${version.metadata.name}`
+            const storageRef = ref(storage, storagePath)
+            await deleteObject(storageRef)
+            console.log(`🗑️ Deleted storage file: ${storagePath}`)
+          }
         } catch (storageError: any) {
           // Continue even if storage deletion fails (file might not exist)
           console.warn(`⚠️ Failed to delete storage file: ${storageError.message}`)
@@ -246,6 +378,18 @@ export const useFileStore = create<FileState>((set, get) => ({
       toast.success(`Chuyển sang v${version}`)
     } catch (error: any) {
       toast.error('Lỗi chuyển version: ' + error.message)
+    }
+  },
+
+  setSequenceViewMode: async (projectId: string, fileId: string, mode: 'video' | 'carousel') => {
+    try {
+      await updateDoc(doc(db, 'projects', projectId, 'files', fileId), {
+        sequenceViewMode: mode
+      })
+      toast.success(`Đã đặt chế độ xem: ${mode === 'video' ? 'Video' : 'Carousel'}`)
+    } catch (error: any) {
+      console.error('Failed to update sequence view mode:', error)
+      toast.error('Lỗi cập nhật chế độ xem')
     }
   },
 

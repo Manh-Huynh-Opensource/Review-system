@@ -28,7 +28,7 @@ const getFileTypeLabel = (type: string) => {
 }
 
 export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', searchTerm = '' }: FilesListProps) {
-  const { files, switchVersion, uploading, deleteFile, deleting, uploadFile, selectedFile: storeSelectedFile, selectFile: storeSelectFile } = useFileStore()
+  const { files, switchVersion, uploading, deleteFile, deleting, uploadFile, setSequenceViewMode, selectedFile: storeSelectedFile, selectFile: storeSelectFile } = useFileStore()
   const { comments, subscribeToComments, addComment, toggleResolve, cleanup: cleanupComments } = useCommentStore()
   const { user } = useAuthStore()
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
@@ -177,6 +177,16 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
     }
   }
 
+  const handleSequenceViewModeChange = async (fileId: string, mode: 'video' | 'carousel') => {
+    if (user) {
+      try {
+        await setSequenceViewMode(projectId, fileId, mode)
+      } catch (error) {
+        // Error is handled in store
+      }
+    }
+  }
+
   // Filter and sort files based on search and sort criteria
   const filteredAndSortedFiles = useMemo(() => {
     if (!files) return []
@@ -309,11 +319,13 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
           onOpenChange={setDialogOpen}
           onSwitchVersion={handleSwitchVersion}
           onUploadNewVersion={user ? handleUploadNewVersion : undefined}
+          onSequenceViewModeChange={user ? handleSequenceViewModeChange : undefined}
           comments={comments}
           currentUserName={currentUserName}
           onUserNameChange={handleUserNameChange}
           onAddComment={handleAddComment}
           onResolveToggle={user ? handleResolveToggle : undefined}
+          isAdmin={!!user}
         />
       )}
 
