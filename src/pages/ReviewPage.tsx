@@ -136,6 +136,17 @@ export default function ReviewPage() {
     }
   }, [files, selectedFile])
 
+  // Update page title
+  useEffect(() => {
+    if (project) {
+      document.title = project.name
+    }
+
+    return () => {
+      document.title = 'Review System'
+    }
+  }, [project])
+
   const handleUserNameChange = (name: string) => {
     setCurrentUserName(name)
     localStorage.setItem('reviewUserName', name)
