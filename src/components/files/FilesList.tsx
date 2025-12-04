@@ -28,7 +28,7 @@ const getFileTypeLabel = (type: string) => {
 }
 
 export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', searchTerm = '' }: FilesListProps) {
-  const { files, switchVersion, uploading, deleteFile, deleting, uploadFile, setSequenceViewMode, updateFrameCaption, selectedFile: storeSelectedFile, selectFile: storeSelectFile } = useFileStore()
+  const { files, switchVersion, uploading, deleteFile, deleting, uploadFile, setSequenceViewMode, updateFrameCaption, renameFile, selectedFile: storeSelectedFile, selectFile: storeSelectFile } = useFileStore()
   const { comments, subscribeToComments, addComment, toggleResolve, editComment, deleteComment, cleanup: cleanupComments } = useCommentStore()
   const { user } = useAuthStore()
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
@@ -107,11 +107,11 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
     }
   }, [storeSelectedFile, projectId, storeSelectFile])
 
-  // Auto-update selected file when files array changes (version switch, upload, etc)
+  // Auto-update selected file when files array changes (version switch, upload, rename, etc)
   useEffect(() => {
     if (selectedFile && files) {
       const updatedFile = files.find(f => f.id === selectedFile.id)
-      if (updatedFile && updatedFile.currentVersion !== selectedFile.currentVersion) {
+      if (updatedFile && (updatedFile.currentVersion !== selectedFile.currentVersion || updatedFile.name !== selectedFile.name)) {
         setSelectedFile({ ...updatedFile })
       }
     }
@@ -344,6 +344,7 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
           onCaptionChange={user ? handleCaptionChange : undefined}
           onEditComment={user ? handleEditComment : undefined}
           onDeleteComment={user ? handleDeleteComment : undefined}
+          onRenameFile={user ? async (fileId, newName) => await renameFile(projectId, fileId, newName) : undefined}
         />
       )}
 

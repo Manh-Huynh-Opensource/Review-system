@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
   Download,
   Clock,
@@ -25,7 +26,10 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal
+  MoreHorizontal,
+  Camera,
+  Pencil,
+  Check
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -44,6 +48,8 @@ import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
 import { linkifyText } from '@/lib/linkify'
 import type { AnnotationObject } from '@/types'
 import type { GLBViewerRef } from '@/components/viewers/GLBViewer'
+import { useFileStore } from '@/stores/files'
+import toast from 'react-hot-toast'
 
 const GLBViewer = lazy(() => import('@/components/viewers/GLBViewer').then(m => ({ default: m.GLBViewer })))
 
@@ -65,6 +71,7 @@ interface Props {
   onDeleteComment?: (commentId: string) => Promise<void>
   isAdmin?: boolean
   onCaptionChange?: (fileId: string, version: number, frame: number, caption: string) => Promise<void>
+  onRenameFile?: (fileId: string, newName: string) => Promise<void>
   // Sequence frame context - for when viewing a single frame from a sequence
   sequenceContext?: {
     totalFrames: number
@@ -108,7 +115,8 @@ export function FileViewDialogShared({
   onDeleteComment,
   isAdmin = false,
   onCaptionChange,
-  sequenceContext
+  sequenceContext,
+  onRenameFile
 }: Props) {
   const [showComments, setShowComments] = useState(true)
   const [showOnlyCurrentTimeComments, setShowOnlyCurrentTimeComments] = useState(false)
@@ -125,6 +133,7 @@ export function FileViewDialogShared({
   const [compareMode, setCompareMode] = useState(false)
   const [leftVersion, setLeftVersion] = useState<number | null>(null)
   const [rightVersion, setRightVersion] = useState<number | null>(null)
+  const [savingThumbnail, setSavingThumbnail] = useState(false)
   const [compareDisplayMode, setCompareDisplayMode] = useState<'side-by-side' | 'slider'>('side-by-side')
   const [comparePosition, setComparePosition] = useState<number>(50) // percent 0-100 for slider
   const [currentVersion, setCurrentVersion] = useState(file?.currentVersion || 1)
@@ -143,6 +152,8 @@ export function FileViewDialogShared({
   const [frameDetailView, setFrameDetailView] = useState<number | null>(null)
   const [navMode, setNavMode] = useState<'frame' | 'marker'>('frame')
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isRenaming, setIsRenaming] = useState(false)
+  const [renameValue, setRenameValue] = useState('')
 
   // Memoize video player callbacks to prevent CustomVideoPlayer re-renders
   const handleTimeUpdate = useCallback((time: number) => {
@@ -895,15 +906,47 @@ export function FileViewDialogShared({
 
     if (file.type === 'model') {
       return (
-        <div className="relative h-[55vh] xl:h-[50vh] 2xl:h-[45vh] bg-muted/20">
+        <div className="relative h-[75vh] xl:h-[70vh] 2xl:h-[65vh] w-full bg-muted/20">
           <Suspense fallback={<div className="flex items-center justify-center h-full">Loading 3D Viewer...</div>}>
             <GLBViewer
               ref={glbViewerRef}
               url={effectiveUrl}
               className="w-full h-full"
+              initialCameraState={current?.cameraState}
             />
           </Suspense>
           {renderAnnotationOverlay()}
+
+          {/* Set as Thumbnail Button - Admin Only */}
+          {isAdmin && (
+            <div className="absolute top-4 right-4 z-10">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={async () => {
+                  const cameraState = glbViewerRef.current?.getCameraState()
+                  const screenshot = glbViewerRef.current?.captureScreenshot()
+                  if (cameraState && screenshot) {
+                    setSavingThumbnail(true)
+                    try {
+                      await useFileStore.getState().setModelThumbnail(_projectId, file.id, currentVersion, screenshot, cameraState)
+                    } catch (error) {
+                      // Error handled in store
+                    } finally {
+                      setSavingThumbnail(false)
+                    }
+                  } else {
+                    toast.error('Không thể capture thumbnail')
+                  }
+                }}
+                disabled={savingThumbnail}
+                className="gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                {savingThumbnail ? 'Đang lưu...' : 'Set as Thumbnail'}
+              </Button>
+            </div>
+          )}
         </div>
       )
     }
@@ -922,14 +965,71 @@ export function FileViewDialogShared({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-[100vw] sm:max-w-[98vw] w-full h-[100vh] sm:h-[98vh] xl:h-[95vh] 2xl:h-[90vh] flex flex-col p-0 gap-0 [&>button]:hidden">
-          <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0">
+          <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0 group">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg">
                 {getFileTypeIcon(file.type)}
               </div>
               <div className="min-w-0 flex-1">
                 <DialogTitle className="text-lg sm:text-xl font-semibold flex items-center gap-2 truncate">
-                  <span className="truncate">{file.name}</span>
+                  {isRenaming ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        className="h-8 text-lg font-semibold"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            if (renameValue.trim() && onRenameFile) {
+                              onRenameFile(file.id, renameValue.trim())
+                              setIsRenaming(false)
+                            }
+                          } else if (e.key === 'Escape') {
+                            setIsRenaming(false)
+                          }
+                        }}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => {
+                          if (renameValue.trim() && onRenameFile) {
+                            onRenameFile(file.id, renameValue.trim())
+                            setIsRenaming(false)
+                          }
+                        }}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => setIsRenaming(false)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="truncate">{file.name}</span>
+                      {isAdmin && onRenameFile && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 shrink-0"
+                          onClick={() => {
+                            setRenameValue(file.name)
+                            setIsRenaming(true)
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </>
+                  )}
                   <Badge variant="outline" className="text-xs font-normal shrink-0">
                     v{currentVersion}
                   </Badge>

@@ -1,11 +1,11 @@
 import { create } from 'zustand'
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
+import {
+  collection,
+  addDoc,
+  updateDoc,
   deleteDoc,
-  doc, 
-  onSnapshot, 
+  doc,
+  onSnapshot,
   query,
   where,
   orderBy,
@@ -22,7 +22,7 @@ interface ClientState {
   isSubscribed: boolean
   currentAdminEmail: string | null
   unsubscribe: Unsubscribe | null
-  
+
   subscribeToClients: (adminEmail: string) => void
   createClient: (data: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'adminEmail'>, adminEmail: string) => Promise<string>
   updateClient: (id: string, data: Partial<Client>) => Promise<void>
@@ -39,20 +39,20 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
   subscribeToClients: (adminEmail: string) => {
     const { isSubscribed, currentAdminEmail } = get()
-    
+
     if (isSubscribed && currentAdminEmail === adminEmail) {
       console.log('🔄 Clients already subscribed for', adminEmail)
       return
     }
-    
+
     if (isSubscribed && currentAdminEmail !== adminEmail) {
       console.log('🧹 Cleaning up clients subscription for', currentAdminEmail)
       get().cleanup()
     }
-    
+
     console.log('📡 Starting clients subscription for', adminEmail)
     set({ isSubscribed: true, currentAdminEmail: adminEmail })
-    
+
     const q = query(
       collection(db, 'clients'),
       where('adminEmail', '==', adminEmail),
@@ -70,7 +70,6 @@ export const useClientStore = create<ClientState>((set, get) => ({
       // Fallback without orderBy if index not ready
       const msg = String(error?.message || '')
       if (msg.toLowerCase().includes('requires an index') || error?.code === 'failed-precondition') {
-        toast('Đang xây dựng Firestore index cho clients...', { icon: '⏳' })
         const fallback = query(
           collection(db, 'clients'),
           where('adminEmail', '==', adminEmail)
@@ -99,12 +98,12 @@ export const useClientStore = create<ClientState>((set, get) => ({
     set({ loading: true })
     try {
       const now = Timestamp.now()
-      
+
       // Filter out undefined values
       const cleanData = Object.fromEntries(
         Object.entries(data).filter(([_, value]) => value !== undefined)
       )
-      
+
       const docRef = await addDoc(collection(db, 'clients'), {
         ...cleanData,
         adminEmail,
@@ -128,7 +127,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
       const cleanData = Object.fromEntries(
         Object.entries(data).filter(([_, value]) => value !== undefined)
       )
-      
+
       await updateDoc(doc(db, 'clients', id), {
         ...cleanData,
         updatedAt: Timestamp.now()
@@ -160,8 +159,8 @@ export const useClientStore = create<ClientState>((set, get) => ({
     console.log('🧹 Cleaning up clients subscription')
     if (unsubscribe) {
       unsubscribe()
-      set({ 
-        unsubscribe: null, 
+      set({
+        unsubscribe: null,
         clients: [],
         isSubscribed: false,
         currentAdminEmail: null

@@ -25,6 +25,7 @@ interface GLBViewerProps {
   url: string
   autoRotate?: boolean
   className?: string
+  initialCameraState?: { position: [number, number, number], target: [number, number, number] }
 }
 
 type RenderMode = 'standard' | 'wireframe' | 'matcap'
@@ -117,10 +118,20 @@ const SceneContent = forwardRef<GLBViewerRef, {
   selectedCamera: string | null
   fileCameras: THREE.Camera[]
   onCamerasDetected: (cameras: THREE.Camera[]) => void
+  initialCameraState?: { position: [number, number, number], target: [number, number, number] }
 }>((props, ref) => {
   const { camera, gl } = useThree()
   const controlsRef = useRef<any>(null)
   const appliedCameraRef = useRef<string | null>(null)
+
+  // Apply initial camera state if provided
+  useLayoutEffect(() => {
+    if (props.initialCameraState && controlsRef.current) {
+      camera.position.set(...props.initialCameraState.position)
+      controlsRef.current.target.set(...props.initialCameraState.target)
+      controlsRef.current.update()
+    }
+  }, [props.initialCameraState, camera])
 
   // Apply file camera when selected
   useLayoutEffect(() => {
@@ -192,7 +203,7 @@ const SceneContent = forwardRef<GLBViewerRef, {
 })
 SceneContent.displayName = 'SceneContent'
 
-export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({ url, autoRotate: initialAutoRotate = false, className }, ref) => {
+export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({ url, autoRotate: initialAutoRotate = false, className, initialCameraState }, ref) => {
   const [autoRotate, setAutoRotate] = useState(initialAutoRotate)
   const [renderMode, setRenderMode] = useState<RenderMode>('standard')
   const [matcapType, setMatcapType] = useState<MatcapType>('clay')
@@ -279,6 +290,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({ url, autoRo
             selectedCamera={selectedCamera}
             fileCameras={fileCameras}
             onCamerasDetected={handleCamerasDetected}
+            initialCameraState={initialCameraState}
           />
         </Suspense>
       </Canvas>

@@ -78,6 +78,17 @@ export function FileCardShared({ file, resolvedUrl, commentCount, onClick, onDel
       )
     }
 
+    if (file.type === 'model' && current?.thumbnailUrl && !imageError) {
+      return (
+        <img
+          src={current.thumbnailUrl}
+          alt={file.name}
+          className="w-full h-full object-cover"
+          onError={() => setImageError(true)}
+        />
+      )
+    }
+
     // Fallback icon
     return (
       <div className="w-full h-full flex items-center justify-center bg-muted/50">
@@ -94,7 +105,7 @@ export function FileCardShared({ file, resolvedUrl, commentCount, onClick, onDel
       {/* Thumbnail */}
       <div className={`${compact ? 'aspect-square' : 'aspect-video'} bg-muted/20 relative overflow-hidden`}>
         {renderThumbnail()}
-        
+
         {/* Overlay on hover */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center">
           <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white text-sm font-medium">
@@ -138,7 +149,7 @@ export function FileCardShared({ file, resolvedUrl, commentCount, onClick, onDel
             </Button>
           )}
         </div>
-        
+
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{formatFileSize(current?.metadata?.size || 0)}</span>
           <span className="flex items-center gap-1">

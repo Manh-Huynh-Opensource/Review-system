@@ -1,14 +1,17 @@
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
+import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useProjectStore } from '@/stores/projects'
 import { useNavigate } from 'react-router-dom'
 import { useProjectThumbnail } from '@/hooks/useProjectThumbnail'
+import { useFileStore } from '@/stores/files'
 import type { Project } from '@/types'
 import { ProjectEditDialog } from './ProjectEditDialog'
 import { ProjectDeleteDialog } from './ProjectDeleteDialog'
-import { Calendar, User, Mail, AlertCircle, MoreVertical, Archive, ArchiveRestore, Image as ImageIcon } from 'lucide-react'
+import { formatFileSize } from '@/lib/utils'
+import { Calendar, User, Mail, AlertCircle, MoreVertical, Archive, ArchiveRestore, Image as ImageIcon, HardDrive } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,10 +26,22 @@ export function ProjectCard({ project, viewMode = 'list' }: { project: Project; 
   const updateProject = useProjectStore(s => s.updateProject)
   const navigate = useNavigate()
   const { thumbnailUrl } = useProjectThumbnail(project.id)
+  const allFiles = useFileStore(s => s.files)
 
   const created = project.createdAt?.toDate ? project.createdAt.toDate() : new Date()
   const deadline = project.deadline?.toDate ? project.deadline.toDate() : null
   const isOverdue = deadline && deadline < new Date()
+
+  // Memoize filtered files to prevent infinite loop
+  const files = useMemo(() => allFiles.filter(f => f.projectId === project.id), [allFiles, project.id])
+
+  // Calculate total file size
+  const totalSize = useMemo(() => {
+    return files.reduce((total, file) => {
+      const fileSize = file.versions.reduce((sum, version) => sum + (version.metadata.size || 0), 0)
+      return total + fileSize
+    }, 0)
+  }, [files])
 
   if (viewMode === 'thumbnails') {
     return (
@@ -139,6 +154,12 @@ export function ProjectCard({ project, viewMode = 'list' }: { project: Project; 
                 <span>{format(deadline, 'dd/MM/yyyy', { locale: vi })}</span>
               </div>
             )}
+            {files.length > 0 && (
+              <div className="flex items-center gap-1">
+                <HardDrive className="h-3 w-3 flex-shrink-0" />
+                <span>{formatFileSize(totalSize)}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -189,6 +210,13 @@ export function ProjectCard({ project, viewMode = 'list' }: { project: Project; 
               <span className={`flex items-center gap-1 ${isOverdue ? 'text-destructive font-medium' : ''}`}>
                 <Calendar className="h-3 w-3" />
                 Deadline: {format(deadline, 'dd/MM/yyyy', { locale: vi })}
+              </span>
+            )}
+
+            {files.length > 0 && (
+              <span className="flex items-center gap-1">
+                <HardDrive className="h-3 w-3" />
+                {formatFileSize(totalSize)}
               </span>
             )}
           </div>

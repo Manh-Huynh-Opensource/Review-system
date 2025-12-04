@@ -37,6 +37,11 @@ export interface FileVersion {
   sequenceUrls?: string[] // For image sequences
   frameCount?: number // Number of frames in sequence
   frameCaptions?: Record<number, string> // Captions for each frame (frame index -> caption text)
+  thumbnailUrl?: string // Custom thumbnail for 3D models
+  cameraState?: { // Camera position for 3D models
+    position: [number, number, number]
+    target: [number, number, number]
+  }
   metadata: {
     size: number
     type: string

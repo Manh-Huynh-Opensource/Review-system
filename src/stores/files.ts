@@ -27,7 +27,7 @@ interface FileState {
   uploading: boolean
   deleting: boolean
   error: string | null
-  unsubscribe: Unsubscribe | null
+  unsubscribes: Map<string, Unsubscribe> // Changed from single unsubscribe to Map
 
   subscribeToFiles: (projectId: string) => void
   loadFiles: (projectId: string) => void
@@ -38,6 +38,8 @@ interface FileState {
   switchVersion: (fileId: string, version: number) => Promise<void>
   setSequenceViewMode: (projectId: string, fileId: string, mode: 'video' | 'carousel' | 'grid') => Promise<void>
   updateFrameCaption: (projectId: string, fileId: string, version: number, frameNumber: number, caption: string) => Promise<void>
+  setModelThumbnail: (projectId: string, fileId: string, version: number, dataUrl: string, cameraState: { position: [number, number, number], target: [number, number, number] }) => Promise<void>
+  renameFile: (projectId: string, fileId: string, newName: string) => Promise<void>
   cleanup: () => void
 }
 
@@ -47,29 +49,43 @@ export const useFileStore = create<FileState>((set, get) => ({
   uploading: false,
   deleting: false,
   error: null,
-  unsubscribe: null,
+  unsubscribes: new Map(),
 
   subscribeToFiles: (projectId: string) => {
+    // Check if already subscribed to this project
+    if (get().unsubscribes.has(projectId)) {
+      console.log(`📂 Already subscribed to files for project ${projectId}`)
+      return
+    }
+
     const q = query(
       collection(db, 'projects', projectId, 'files'),
       orderBy('createdAt', 'desc')
     )
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const files = snapshot.docs.map(doc => ({
+      const projectFiles = snapshot.docs.map(doc => ({
         id: doc.id,
         projectId,
         ...doc.data()
       })) as FileType[]
 
-      set({ files, error: null })
+      // Merge with existing files from other projects
+      const currentFiles = get().files
+      const otherProjectFiles = currentFiles.filter(f => f.projectId !== projectId)
+      const allFiles = [...otherProjectFiles, ...projectFiles]
+
+      set({ files: allFiles, error: null })
     }, (error) => {
       const errorMessage = 'Lỗi tải file: ' + error.message
       set({ error: errorMessage })
       toast.error(errorMessage)
     })
 
-    set({ unsubscribe })
+    // Store the unsubscribe function
+    const unsubscribes = new Map(get().unsubscribes)
+    unsubscribes.set(projectId, unsubscribe)
+    set({ unsubscribes })
   },
 
   // Alias for compatibility with FilesList component
@@ -430,11 +446,62 @@ export const useFileStore = create<FileState>((set, get) => ({
     }
   },
 
-  cleanup: () => {
-    const { unsubscribe } = get()
-    if (unsubscribe) {
-      unsubscribe()
-      set({ unsubscribe: null, files: [], selectedFile: null })
+  setModelThumbnail: async (projectId: string, fileId: string, version: number, dataUrl: string, cameraState: { position: [number, number, number], target: [number, number, number] }) => {
+    try {
+      // Convert data URL to blob
+      const response = await fetch(dataUrl)
+      const blob = await response.blob()
+
+      // Upload to Storage
+      const storagePath = `projects/${projectId}/${fileId}/v${version}/thumbnail.png`
+      const storageRef = ref(storage, storagePath)
+      await uploadBytes(storageRef, blob)
+      const thumbnailUrl = await getDownloadURL(storageRef)
+
+      // Update file document
+      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+      const fileDoc = await getDoc(fileRef)
+
+      if (!fileDoc.exists()) throw new Error('File not found')
+
+      const data = fileDoc.data() as FileType
+      const versions = [...data.versions]
+      const versionIndex = versions.findIndex(v => v.version === version)
+
+      if (versionIndex >= 0) {
+        versions[versionIndex] = {
+          ...versions[versionIndex],
+          thumbnailUrl,
+          cameraState
+        }
+
+        await updateDoc(fileRef, { versions })
+        toast.success('Đã lưu thumbnail')
+      }
+    } catch (error: any) {
+      console.error('Error setting model thumbnail:', error)
+      toast.error('Lỗi khi lưu thumbnail')
+      throw error
     }
   },
+
+  renameFile: async (projectId: string, fileId: string, newName: string) => {
+    try {
+      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+      await updateDoc(fileRef, {
+        name: newName,
+        updatedAt: Timestamp.now()
+      })
+      toast.success('Đổi tên file thành công')
+    } catch (error: any) {
+      console.error('Error renaming file:', error)
+      toast.error('Lỗi khi đổi tên file: ' + error.message)
+      throw error
+    }
+  },
+
+  cleanup: () => {
+    get().unsubscribes.forEach(unsubscribe => unsubscribe())
+    set({ unsubscribes: new Map(), files: [], selectedFile: null, error: null })
+  }
 }))

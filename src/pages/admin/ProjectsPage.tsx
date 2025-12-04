@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useProjectStore } from '@/stores/projects'
+import { useFileStore } from '@/stores/files'
 import { useAuthStore } from '@/stores/auth'
 import { ProjectCreateDialog } from '@/components/projects/ProjectCreateDialog'
 import { ProjectCard } from '@/components/projects/ProjectCard'
@@ -18,6 +19,7 @@ type ViewMode = 'list' | 'thumbnails'
 
 export default function ProjectsPage() {
   const { projects, subscribeToProjects, isSubscribed } = useProjectStore()
+  const { subscribeToFiles, cleanup: cleanupFiles } = useFileStore()
   const user = useAuthStore(s => s.user)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortOption>('newest')
@@ -40,6 +42,21 @@ export default function ProjectsPage() {
       subscribeToProjects(user.email)
     }
   }, [user?.email, subscribeToProjects])
+
+  // Subscribe to files for all projects
+  useEffect(() => {
+    if (projects.length > 0) {
+      // Subscribe to files for each project
+      projects.forEach(project => {
+        subscribeToFiles(project.id)
+      })
+    }
+
+    return () => {
+      // Cleanup when component unmounts
+      cleanupFiles()
+    }
+  }, [projects, subscribeToFiles, cleanupFiles])
 
   const filteredAndSortedProjects = useMemo(() => {
     let filtered = projects
