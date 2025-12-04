@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -51,5 +51,28 @@ export async function uploadCommentAttachments(files: File[], projectId: string,
 
   return await Promise.all(uploadPromises)
 }
+
+// Delete a single file from Firebase Storage
+export async function deleteStorageFile(path: string): Promise<void> {
+  const storageRef = ref(storage, path)
+  await deleteObject(storageRef)
+}
+
+// Delete all files in a folder from Firebase Storage
+export async function deleteStorageFolder(folderPath: string): Promise<void> {
+  const folderRef = ref(storage, folderPath)
+  const listResult = await listAll(folderRef)
+
+  // Delete all files in the folder
+  const deletePromises = listResult.items.map(item => deleteObject(item))
+  await Promise.all(deletePromises)
+
+  // Recursively delete subfolders
+  const subfolderPromises = listResult.prefixes.map(prefix =>
+    deleteStorageFolder(prefix.fullPath)
+  )
+  await Promise.all(subfolderPromises)
+}
+
 
 export default app

@@ -11,6 +11,7 @@ import { AuthGuard } from './components/auth/AuthGuard'
 
 // Lazy load pages
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const DashboardPage = lazy(() => import('./pages/admin/DashboardPage'))
 const ProjectsPage = lazy(() => import('./pages/admin/ProjectsPage'))
 const ProjectDetailPage = lazy(() => import('./pages/admin/ProjectDetailPage'))
 const ClientsPage = lazy(() => import('./pages/admin/ClientsPage'))
@@ -44,7 +45,15 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/app/projects" replace />,
+            element: <Navigate to="/app/dashboard" replace />,
+          },
+          {
+            path: 'dashboard',
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <DashboardPage />
+              </Suspense>
+            ),
           },
           {
             path: 'projects',
@@ -109,7 +118,7 @@ function App() {
   useEffect(() => {
     // Initialize theme from localStorage or default to dark
     setTheme(theme)
-    
+
     // Initialize auth listener
     const unsubscribe = initialize()
     return () => {
@@ -120,7 +129,7 @@ function App() {
   return (
     <>
       <RouterProvider router={router} />
-      <Toaster 
+      <Toaster
         position="top-right"
         toastOptions={{
           duration: 3000,

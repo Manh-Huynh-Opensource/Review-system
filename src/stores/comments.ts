@@ -28,6 +28,7 @@ interface CommentState {
   togglePin: (projectId: string, commentId: string, currentStatus: boolean) => Promise<void>
   editComment: (projectId: string, commentId: string, newContent: string) => Promise<void>
   deleteComment: (projectId: string, commentId: string) => Promise<void>
+  updateDisplayName: (projectId: string, commentId: string, newDisplayName: string) => Promise<void>
   cleanup: () => void
 }
 
@@ -239,6 +240,20 @@ export const useCommentStore = create<CommentState>((set, get) => ({
     } catch (error: any) {
       console.error('Failed to delete comment:', error)
       toast.error('Lỗi xóa bình luận: ' + error.message)
+    }
+  },
+
+  updateDisplayName: async (projectId: string, commentId: string, newDisplayName: string) => {
+    try {
+      await updateDoc(doc(db, 'projects', projectId, 'comments', commentId), {
+        userName: newDisplayName,
+        isEdited: true,
+        updatedAt: Timestamp.now()
+      })
+      toast.success('Đã cập nhật tên hiển thị')
+    } catch (error: any) {
+      console.error('Failed to update display name:', error)
+      toast.error('Lỗi cập nhật tên hiển thị: ' + error.message)
     }
   },
 

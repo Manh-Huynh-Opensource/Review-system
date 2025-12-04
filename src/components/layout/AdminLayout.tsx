@@ -6,16 +6,22 @@ import { Separator } from '@/components/ui/separator'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuLabel
 } from '@/components/ui/dropdown-menu'
-import { LogOut, FolderOpen, Home, ChevronDown, Plus, Users, User } from 'lucide-react'
-import { useEffect } from 'react'
+import { LogOut, FolderOpen, Home, ChevronDown, Plus, Users, User, BarChart3, Menu } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 export function AdminLayout() {
   const { user, signOut } = useAuthStore()
@@ -23,7 +29,8 @@ export function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { projectId } = useParams()
-  
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   const currentProject = projects.find(p => p.id === projectId)
   const isProjectDetail = location.pathname.includes('/projects/') && projectId
   const isProjectsList = location.pathname === '/app/projects'
@@ -45,31 +52,72 @@ export function AdminLayout() {
     }
   }, [user?.email, subscribeToProjects])
 
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+
+  const navItems = [
+    { path: '/app/dashboard', label: 'Dashboard', icon: BarChart3, active: location.pathname === '/app/dashboard' },
+    { path: '/app/projects', label: 'Dự án', icon: FolderOpen, active: isProjectsList || isProjectDetail },
+    { path: '/app/clients', label: 'Khách hàng', icon: Users, active: location.pathname === '/app/clients' },
+  ]
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+      {/* Compact Header */}
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto flex h-14 items-center justify-between px-3 sm:px-4">
+          {/* Left: Logo + Mobile Menu */}
+          <div className="flex items-center gap-2">
+            {/* Mobile Menu Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="md:hidden h-9 w-9 p-0"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Menu</span>
+            </Button>
+
+            {/* Logo/Brand */}
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => navigate('/app/projects')}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 h-9 px-2 sm:px-3"
             >
               <Home className="w-4 h-4" />
-              Review System
+              <span className="font-semibold text-sm sm:text-base">Review System</span>
             </Button>
-            
+
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center gap-1 ml-2">
+              {navItems.map(item => (
+                <Button
+                  key={item.path}
+                  variant={item.active ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => navigate(item.path)}
+                  className="gap-1.5 h-9"
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span className="text-sm">{item.label}</span>
+                </Button>
+              ))}
+            </nav>
+
+            {/* Project Selector (Desktop & Mobile) */}
             {isProjectDetail && (
               <>
-                <Separator orientation="vertical" className="h-6" />
+                <Separator orientation="vertical" className="h-5 hidden md:block" />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                      <FolderOpen className="w-4 h-4" />
-                      {currentProject?.name || 'Chọn dự án'}
-                      <ChevronDown className="w-3 h-3" />
+                    <Button variant="ghost" size="sm" className="gap-1.5 h-9 max-w-[120px] sm:max-w-[200px]">
+                      <FolderOpen className="w-4 h-4 shrink-0" />
+                      <span className="truncate text-sm">{currentProject?.name || 'Project'}</span>
+                      <ChevronDown className="w-3 h-3 shrink-0" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-64">
@@ -84,7 +132,7 @@ export function AdminLayout() {
                       </div>
                     ) : (
                       projects.map(project => (
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           key={project.id}
                           onClick={() => navigate(`/app/projects/${project.id}`)}
                           className={project.id === projectId ? 'bg-accent' : ''}
@@ -104,18 +152,20 @@ export function AdminLayout() {
               </>
             )}
           </div>
-          
-          <div className="flex items-center gap-2">
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
             <NotificationBell />
-            <Separator orientation="vertical" className="h-6" />
-            
+            <Separator orientation="vertical" className="h-5 hidden sm:block" />
+
+            {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2">
+                <Button variant="ghost" size="sm" className="gap-1.5 h-9">
                   <User className="h-4 w-4" />
-                  <span className="hidden sm:inline max-w-[150px] truncate">{user?.email}</span>
-                  <ChevronDown className="h-3 w-3" />
+                  <span className="hidden lg:inline max-w-[120px] truncate text-sm">{user?.email}</span>
+                  <ChevronDown className="h-3 w-3 hidden sm:block" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -140,45 +190,72 @@ export function AdminLayout() {
         </div>
       </header>
 
-      {/* Breadcrumb Navigation */}
-      <nav className="border-b bg-muted/30">
-        <div className="container mx-auto px-4 py-2">
-          <div className="flex items-center gap-2">
-            <Button 
-              variant={isProjectsList ? 'default' : 'ghost'}
-              size="sm" 
-              onClick={() => navigate('/app/projects')}
-              className="gap-2"
-            >
-              <FolderOpen className="w-4 h-4" />
-              Dự án
-            </Button>
-            
-            <Button 
-              variant={location.pathname === '/app/clients' ? 'default' : 'ghost'}
-              size="sm" 
-              onClick={() => navigate('/app/clients')}
-              className="gap-2"
-            >
-              <Users className="w-4 h-4" />
-              Khách hàng
-            </Button>
-            
-            {isProjectDetail && (
-              <>
-                <span className="text-muted-foreground mx-2">/</span>
-                <div className="bg-card px-3 py-1.5 rounded-md border shadow-sm">
-                  <span className="text-sm font-medium">
-                    {currentProject?.name || 'Loading...'}
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </nav>
+      {/* Mobile Menu Dialog */}
+      <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <DialogContent className="sm:max-w-[340px] p-0 gap-0">
+          <DialogHeader className="px-4 py-3 border-b">
+            <DialogTitle className="text-base font-medium">Menu</DialogTitle>
+          </DialogHeader>
 
-      <main className="container mx-auto px-4 py-8">
+          <div className="p-3">
+            {/* Navigation */}
+            <nav className="space-y-1 mb-3">
+              {navItems.map(item => (
+                <Button
+                  key={item.path}
+                  variant={item.active ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => {
+                    navigate(item.path)
+                    setMobileMenuOpen(false)
+                  }}
+                  className="w-full justify-start gap-2 h-9"
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span className="text-sm">{item.label}</span>
+                </Button>
+              ))}
+            </nav>
+
+            <Separator className="my-3" />
+
+            {/* Theme Toggle */}
+            <div className="flex items-center justify-between px-3 py-2 mb-3">
+              <span className="text-sm">Giao diện</span>
+              <ThemeToggle />
+            </div>
+
+            <Separator className="my-3" />
+
+            {/* Account Section */}
+            <div className="space-y-2">
+              <div className="px-3 py-1">
+                <p className="text-xs text-muted-foreground mb-1">Tài khoản</p>
+                <p className="text-sm font-medium truncate">{user?.email}</p>
+              </div>
+
+              <div className="px-1">
+                <ChangePasswordDialog />
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  signOut()
+                  setMobileMenuOpen(false)
+                }}
+                className="w-full justify-start gap-2 h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="text-sm">Đăng xuất</span>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
         <Outlet />
       </main>
     </div>

@@ -73,40 +73,60 @@ export function ImageSequenceViewer({
   onStartAnnotating: _onStartAnnotating,
   onFrameDetailView
 }: ImageSequenceViewerProps) {
-  const [internalCurrentFrame, setInternalCurrentFrame] = useState(0)
-  const currentFrame = externalCurrentFrame !== undefined ? externalCurrentFrame : internalCurrentFrame
-
-  const setCurrentFrame = (frame: number | ((prev: number) => number)) => {
-    if (externalCurrentFrame !== undefined) {
-      const newFrame = typeof frame === 'function' ? frame(currentFrame) : frame
-      onFrameChange?.(newFrame)
-    } else {
-      setInternalCurrentFrame(frame)
-    }
-  }
-
+  const [currentFrame, setCurrentFrame] = useState(externalCurrentFrame !== undefined ? externalCurrentFrame : 0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLooping, setIsLooping] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode)
+  const [imagesLoaded, setImagesLoaded] = useState(false)
+  const [loadedCount, setLoadedCount] = useState(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const frameCount = urls.length
 
-  // Preload images
+  // Sync with external currentFrame if provided
   useEffect(() => {
-    urls.forEach(url => {
-      const img = new Image()
-      img.src = url
+    if (externalCurrentFrame !== undefined) {
+      setCurrentFrame(externalCurrentFrame)
+    }
+  }, [externalCurrentFrame])
+
+  // Preload images with tracking
+  useEffect(() => {
+    setImagesLoaded(false)
+    setLoadedCount(0)
+    let loadCount = 0
+
+    const promises = urls.map((url) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image()
+        img.onload = () => {
+          loadCount++
+          setLoadedCount(loadCount)
+          resolve()
+        }
+        img.onerror = () => {
+          loadCount++
+          setLoadedCount(loadCount)
+          resolve() // Still resolve even on error
+        }
+        img.src = url
+      })
+    })
+
+    Promise.all(promises).then(() => {
+      setImagesLoaded(true)
     })
   }, [urls])
 
   // Handle animation loop
   useEffect(() => {
-    if (isPlaying) {
+    if (isPlaying && viewMode === 'video' && imagesLoaded) {
       intervalRef.current = setInterval(() => {
         setCurrentFrame((prev) => {
           const next = prev + 1
           if (next >= frameCount) {
-            if (isLooping) return 0
+            if (isLooping) {
+              return 0
+            }
             setIsPlaying(false)
             return prev
           }
@@ -124,14 +144,12 @@ export function ImageSequenceViewer({
         clearInterval(intervalRef.current)
       }
     }
-  }, [isPlaying, isLooping, frameCount, fps])
+  }, [isPlaying, isLooping, frameCount, fps, viewMode, imagesLoaded])
 
-  // Notify parent of frame changes when playing
+  // Notify parent of frame changes
   useEffect(() => {
-    if (isPlaying && onFrameChange) {
-      onFrameChange(currentFrame)
-    }
-  }, [currentFrame, isPlaying, onFrameChange])
+    onFrameChange?.(currentFrame)
+  }, [currentFrame, onFrameChange])
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying)
@@ -171,6 +189,49 @@ export function ImageSequenceViewer({
       setViewMode(mode)
       onViewModeChange?.(mode)
     }
+  }
+
+  // Mouse scrubbing state
+  const [isMouseDown, setIsMouseDown] = useState(false)
+  const [isScrubbing, setIsScrubbing] = useState(false)
+  const imageContainerRef = useRef<HTMLDivElement>(null)
+
+  // Mouse scrubbing handler
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isMouseDown || viewMode === 'grid') return
+
+    const container = imageContainerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const percentage = Math.max(0, Math.min(1, x / rect.width))
+    const targetFrame = Math.floor(percentage * (frameCount - 1))
+
+    if (targetFrame !== currentFrame) {
+      setCurrentFrame(targetFrame)
+      onFrameChange?.(targetFrame)
+      setIsScrubbing(true)
+    }
+  }
+
+  const handleMouseDown = () => {
+    setIsMouseDown(true)
+    setIsScrubbing(false)
+    // Pause playback when starting to scrub
+    if (isPlaying) {
+      setIsPlaying(false)
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsMouseDown(false)
+    setTimeout(() => setIsScrubbing(false), 100)
+  }
+
+  const handleMouseLeave = () => {
+    setIsMouseDown(false)
+    setTimeout(() => setIsScrubbing(false), 100)
   }
 
   // Sync view mode if prop changes (e.g. from parent)
@@ -227,15 +288,38 @@ export function ImageSequenceViewer({
 
       {/* Image Display - Hide in Grid Mode */}
       {viewMode !== 'grid' && (
-        <div className="relative viewport flex-1 min-h-0 flex items-center justify-center max-h-[calc(100dvh-16rem)] 2xl:max-h-[calc(100dvh-20rem)]" id="sequence-image-container">
+        <div
+          ref={imageContainerRef}
+          className={`relative viewport flex-1 min-h-0 flex items-center justify-center max-h-[calc(100dvh-16rem)] 2xl:max-h-[calc(100dvh-20rem)] ${isMouseDown ? 'cursor-grabbing' : 'cursor-grab'}`}
+          id="sequence-image-container"
+          onMouseMove={handleMouseMove}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+        >
           <img
             src={urls[currentFrame]}
             alt={`Frame ${currentFrame + 1}`}
-            className="w-full h-full object-contain max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh]"
+            className="w-full h-full object-contain max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] select-none"
             draggable={false}
           />
           <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border/50 px-3 py-1.5 rounded-md text-sm font-mono pointer-events-none z-10">
             Frame {currentFrame + 1} / {frameCount}
+          </div>
+
+          {/* Scrubbing indicator */}
+          {isScrubbing && (
+            <div className="absolute top-4 right-4 bg-primary/90 backdrop-blur-sm border border-primary px-3 py-1.5 rounded-md text-sm font-medium pointer-events-none z-10 text-primary-foreground">
+              Scrubbing...
+            </div>
+          )}
+
+          {/* Progress bar */}
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-background/20 pointer-events-none">
+            <div
+              className="h-full bg-primary transition-all duration-75"
+              style={{ width: `${((currentFrame + 1) / frameCount) * 100}%` }}
+            />
           </div>
 
           {/* Annotation overlay for video/carousel modes only */}
@@ -275,6 +359,14 @@ export function ImageSequenceViewer({
       {viewMode === 'video' ? (
         /* Video Mode Controls */
         <div className="space-y-3 px-4 flex-shrink-0 bg-background/95 backdrop-blur-sm border-t">
+          {/* Loading indicator */}
+          {!imagesLoaded && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-md">
+              <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
+              <span>Loading frames: {loadedCount} / {frameCount}</span>
+            </div>
+          )}
+
           {/* Timeline Slider */}
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground font-mono w-12 text-right">
@@ -287,6 +379,7 @@ export function ImageSequenceViewer({
               step={1}
               onValueChange={handleFrameChange}
               className="flex-1"
+              disabled={!imagesLoaded}
             />
             <span className="text-xs text-muted-foreground font-mono w-12">
               {String(frameCount).padStart(3, '0')}
@@ -299,7 +392,7 @@ export function ImageSequenceViewer({
               variant="outline"
               size="sm"
               onClick={handleFirstFrame}
-              disabled={currentFrame === 0}
+              disabled={currentFrame === 0 || !imagesLoaded}
             >
               <SkipBack className="w-4 h-4" />
             </Button>
@@ -308,7 +401,7 @@ export function ImageSequenceViewer({
               variant="outline"
               size="sm"
               onClick={handlePrevFrame}
-              disabled={currentFrame === 0}
+              disabled={currentFrame === 0 || !imagesLoaded}
             >
               <SkipBack className="w-3 h-3" />
             </Button>
@@ -318,6 +411,7 @@ export function ImageSequenceViewer({
               size="lg"
               onClick={handlePlayPause}
               className="px-6"
+              disabled={!imagesLoaded}
             >
               {isPlaying ? (
                 <Pause className="w-5 h-5" />
@@ -330,7 +424,7 @@ export function ImageSequenceViewer({
               variant="outline"
               size="sm"
               onClick={handleNextFrame}
-              disabled={currentFrame === frameCount - 1}
+              disabled={currentFrame === frameCount - 1 || !imagesLoaded}
             >
               <SkipForward className="w-3 h-3" />
             </Button>
@@ -339,7 +433,7 @@ export function ImageSequenceViewer({
               variant="outline"
               size="sm"
               onClick={handleLastFrame}
-              disabled={currentFrame === frameCount - 1}
+              disabled={currentFrame === frameCount - 1 || !imagesLoaded}
             >
               <SkipForward className="w-4 h-4" />
             </Button>
@@ -351,6 +445,7 @@ export function ImageSequenceViewer({
               size="sm"
               onClick={() => setIsLooping(!isLooping)}
               title="Loop"
+              disabled={!imagesLoaded}
             >
               <Repeat className="w-4 h-4" />
             </Button>

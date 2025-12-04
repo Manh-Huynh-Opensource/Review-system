@@ -43,6 +43,7 @@ export function CommentsList({
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
+  const [editDisplayName, setEditDisplayName] = useState('')
   const [submittingEdit, setSubmittingEdit] = useState(false)
   const [replyContent, setReplyContent] = useState('')
   const [submittingReply, setSubmittingReply] = useState(false)
@@ -121,6 +122,7 @@ export function CommentsList({
   }
 
   const togglePin = useCommentStore(s => s.togglePin)
+  const updateDisplayName = useCommentStore(s => s.updateDisplayName)
 
   const handlePin = async (comment: Comment) => {
     try {
@@ -133,21 +135,30 @@ export function CommentsList({
   const handleEditClick = (comment: Comment) => {
     setEditingCommentId(comment.id)
     setEditContent(comment.content)
+    setEditDisplayName(comment.userName)
   }
 
   const handleCancelEdit = () => {
     setEditingCommentId(null)
     setEditContent('')
+    setEditDisplayName('')
   }
 
-  const handleSaveEdit = async (commentId: string) => {
-    if (!editContent.trim() || !onEdit) return
+  const handleSaveEdit = async (comment: Comment) => {
+    if (!editContent.trim() || !editDisplayName.trim()) return
 
     setSubmittingEdit(true)
     try {
-      await onEdit(commentId, editContent)
+      // Update both content and display name
+      if (onEdit) {
+        await onEdit(comment.id, editContent)
+      }
+      if (editDisplayName !== comment.userName) {
+        await updateDisplayName(comment.projectId, comment.id, editDisplayName)
+      }
       setEditingCommentId(null)
       setEditContent('')
+      setEditDisplayName('')
     } catch (error) {
       console.error('Failed to edit comment:', error)
     } finally {
@@ -300,13 +311,26 @@ export function CommentsList({
 
           {/* Content */}
           {editingCommentId === comment.id ? (
-            <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
-              <Textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="min-h-[80px] text-sm"
-                autoFocus
-              />
+            <div className="mt-2 space-y-3" onClick={(e) => e.stopPropagation()}>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Tên hiển thị</label>
+                <input
+                  type="text"
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Nhập tên hiển thị"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Nội dung</label>
+                <Textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="min-h-[80px] text-sm"
+                  placeholder="Nhập nội dung bình luận"
+                />
+              </div>
               <div className="flex justify-end gap-2">
                 <Button
                   size="sm"
@@ -318,8 +342,8 @@ export function CommentsList({
                 </Button>
                 <Button
                   size="sm"
-                  onClick={() => handleSaveEdit(comment.id)}
-                  disabled={submittingEdit || !editContent.trim()}
+                  onClick={() => handleSaveEdit(comment)}
+                  disabled={submittingEdit || !editContent.trim() || !editDisplayName.trim()}
                 >
                   {submittingEdit ? 'Đang lưu...' : 'Lưu'}
                 </Button>
