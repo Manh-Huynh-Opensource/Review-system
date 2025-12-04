@@ -180,27 +180,6 @@ export function FileViewDialogShared({
     setIsPlaying(false)
   }, [])
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleCommentMarkerClick = useCallback((comment: any) => {
-    if (!file) return
-    setCurrentTime(comment.timestamp || 0)
-    if (comment.annotationData) {
-      // We'll call handleViewAnnotation which will be defined later
-      // This is okay because it's only called during event handlers, not during render
-      handleViewAnnotation(comment.annotationData, comment)
-    }
-  }, [file])
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleExportFrame = useCallback((dataUrl: string, timestamp: number) => {
-    if (!file) return
-    const link = document.createElement('a')
-    const formattedTime = `${Math.floor(timestamp / 60)}-${Math.floor(timestamp % 60).toString().padStart(2, '0')}`
-    link.download = `${file.name.replace(/\.[^/.]+$/, '')}-frame-${formattedTime}.png`
-    link.href = dataUrl
-    link.click()
-  }, [file?.name])
-
   // Update current version when file changes
   useEffect(() => {
     if (file) {
