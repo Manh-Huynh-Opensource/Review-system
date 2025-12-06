@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
-import { Send, PenTool, Image, X, Paperclip, Camera } from 'lucide-react'
+import { RichTextarea, type RichTextareaRef } from '@/components/ui/rich-textarea'
+import { Send, PenTool, Image, X, Paperclip, Camera, Link as LinkIcon } from 'lucide-react'
+import { LinkDialog } from '@/components/ui/link-dialog'
 
 interface AttachmentPreview {
     id: string
@@ -41,8 +42,57 @@ export function AddComment({
     const [submitting, setSubmitting] = useState(false)
     const [attachments, setAttachments] = useState<AttachmentPreview[]>([])
     const [captureView, setCaptureView] = useState(false)
+    const [showLinkDialog, setShowLinkDialog] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const textareaRef = useRef<HTMLTextAreaElement>(null)
+    const textareaRef = useRef<RichTextareaRef>(null)
+    const [focused, setFocused] = useState(false)
+
+    // Expand textarea when focused or typing
+    const computedRows = focused || content.length > 0 ? 5 : 3
+
+    // Detect pasted/typed URLs and wrap with markdown [title](url) for editable display text
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/
+
+    const getDefaultTitle = (raw: string) => {
+        const url = raw.startsWith('www.') ? `https://${raw}` : raw
+        try {
+            const u = new URL(url)
+            return u.hostname.replace(/^www\./, '')
+        } catch {
+            return raw
+        }
+    }
+
+    const wrapUrlIfNeeded = async (text: string): Promise<string> => {
+        // skip if already markdown link
+        if (/\[[^\]]+\]\((https?:\/\/[^\s)]+|www\.[^\s)]+)\)/.test(text)) return text
+        const m = text.match(urlRegex)
+        if (!m) return text
+        const raw = m[0]
+        const title = getDefaultTitle(raw)
+        // replace first occurrence; user can edit the [title] inline
+        return text.replace(raw, `[${title}](${raw})`)
+    }
+
+    const insertMarkdownLink = (url: string, title: string) => {
+        const markdown = `[${title}](${url})`
+
+        const el = textareaRef.current
+        if (el) {
+            const start = el.selectionStart ?? content.length
+            const end = el.selectionEnd ?? content.length
+            const newVal = content.slice(0, start) + markdown + content.slice(end)
+            setContent(newVal)
+            // restore cursor after next tick
+            setTimeout(() => {
+                el.focus()
+                const pos = start + markdown.length
+                el.setSelectionRange(pos, pos)
+            }, 0)
+        } else {
+            setContent((prev) => prev + markdown)
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -120,6 +170,16 @@ export function AddComment({
             e.preventDefault()
             handleFiles(imageFiles)
         }
+
+        // If not images, try to detect URL and convert to markdown link
+        if (imageFiles.length === 0) {
+            const pastedText = e.clipboardData.getData('text')
+            if (urlRegex.test(pastedText)) {
+                e.preventDefault()
+                const newText = await wrapUrlIfNeeded(content + pastedText)
+                setContent(newText)
+            }
+        }
     }
 
     const removeAttachment = (id: string) => {
@@ -169,19 +229,31 @@ export function AddComment({
             )}
 
             <div className="space-y-2">
-                <Textarea
+                <RichTextarea
                     ref={textareaRef}
                     placeholder={showTimestamp && currentTimestamp !== undefined
                         ? `Bình luận tại ${formatTime(currentTimestamp)}...`
                         : 'Viết bình luận...'}
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
+                    onChange={async (val) => {
+                        // Attempt to wrap URL when user types a space after it
+                        if (urlRegex.test(val)) {
+                            const newVal = await wrapUrlIfNeeded(val)
+                            setContent(newVal)
+                        } else {
+                            setContent(val)
+                        }
+                    }}
                     onPaste={handlePaste}
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
                     required
-                    rows={3}
-                    className="text-sm resize-none min-h-[80px]"
+                    rows={computedRows}
+                    minRows={3}
+                    maxRows={8}
+                    className=""
                 />
 
                 {/* Attachment Previews */}
@@ -251,6 +323,18 @@ export function AddComment({
                             <Image className="w-4 h-4" />
                         </Button>
 
+                        {/* Insert Link */}
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setShowLinkDialog(true)}
+                            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                            title="Chèn liên kết"
+                        >
+                            <LinkIcon className="w-4 h-4" />
+                        </Button>
+
                         {canCaptureView && (
                             <Button
                                 type="button"
@@ -292,6 +376,12 @@ export function AddComment({
                     </Button>
                 </div>
             </div>
+            
+            <LinkDialog 
+                open={showLinkDialog}
+                onOpenChange={setShowLinkDialog}
+                onInsert={insertMarkdownLink}
+            />
         </form>
     )
 }

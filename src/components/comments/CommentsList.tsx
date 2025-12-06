@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns'
+import { linkifyText } from '@/lib/linkify'
 import { vi } from 'date-fns/locale'
 import { useEffect, useState } from 'react'
 import type { Comment } from '@/types'
@@ -351,23 +352,7 @@ export function CommentsList({
             </div>
           ) : (
             <div className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-              {comment.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) => {
-                if (part.match(/https?:\/\/[^\s]+/)) {
-                  return (
-                    <a
-                      key={i}
-                      href={part}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {part}
-                    </a>
-                  )
-                }
-                return part
-              })}
+              {linkifyText(comment.content)}
               {comment.isEdited && (
                 <span className="text-xs text-muted-foreground ml-2 italic">(đã chỉnh sửa)</span>
               )}
