@@ -1013,13 +1013,14 @@ export function FileViewDialogShared({
 
     if (file.type === 'model') {
       return (
-        <div className="relative h-[75vh] xl:h-[70vh] 2xl:h-[65vh] w-full bg-muted/20">
+        <div className="relative h-[50vh] sm:h-[75vh] xl:h-[70vh] 2xl:h-[65vh] w-full max-w-full bg-muted/20">
           <Suspense fallback={<div className="flex items-center justify-center h-full">Loading 3D Viewer...</div>}>
             <GLBViewer
               ref={glbViewerRef}
               url={effectiveUrl}
               className="w-full h-full"
               initialCameraState={current?.cameraState}
+              showMobileToolbar={true}
             />
           </Suspense>
           {renderAnnotationOverlay()}
@@ -1361,7 +1362,7 @@ export function FileViewDialogShared({
 
           <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
             {/* Main Content Area */}
-            <div className={`flex-1 overflow-auto bg-background/50 flex flex-col ${showComments && !isVideoFullscreen ? '' : ''}`}>
+            <div className={`flex-1 overflow-y-auto overflow-x-hidden bg-background/50 flex flex-col ${showComments && !isVideoFullscreen ? '' : ''}`}>
               {/* Toolbar for Annotation */}
               <div id="annotation-toolbar" className="p-2 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 gap-2">
                 <div className="hidden sm:flex items-center gap-2 w-full sm:w-auto">
@@ -1405,7 +1406,7 @@ export function FileViewDialogShared({
               </div>
 
               {/* File Preview */}
-              <div id="preview-container" className="flex-1 p-2 flex items-center justify-center min-h-0 overflow-hidden">
+              <div id="preview-container" className="flex-1 p-0 sm:p-2 flex items-center justify-center min-h-0 overflow-x-hidden overflow-y-visible sm:overflow-hidden">
                 {renderFilePreview()}
               </div>
             </div>

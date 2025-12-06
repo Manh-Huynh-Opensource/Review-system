@@ -438,29 +438,47 @@ export function startFileTour({ fileType, isMobile }: TourOptions) {
           }
         },
         {
-          element: '#model-auto-rotate',
+          element: '#mobile-3d-toolbar',
+          popover: {
+            title: 'Thanh công cụ 3D',
+            description: 'Các nút điều khiển hiển thị mô hình 3D.',
+            side: 'top',
+            align: 'center'
+          }
+        },
+        {
+          element: '#mobile-model-auto-rotate',
           popover: {
             title: 'Tự động xoay',
             description: 'Bật/tắt tự động xoay mô hình.',
-            side: 'bottom',
+            side: 'top',
             align: 'center'
           }
         },
         {
-          element: '#model-render-mode',
+          element: '#mobile-model-render-mode',
           popover: {
             title: 'Chế độ hiển thị',
-            description: 'Chuyển đổi chế độ hiển thị mô hình.',
-            side: 'bottom',
+            description: 'Chuyển đổi Standard, Wireframe hoặc Matcap.',
+            side: 'top',
             align: 'center'
           }
         },
         {
-          element: '#model-screenshot',
+          element: '#mobile-model-screenshot',
           popover: {
             title: 'Chụp ảnh',
             description: 'Lưu ảnh PNG của góc nhìn hiện tại.',
-            side: 'bottom',
+            side: 'top',
+            align: 'center'
+          }
+        },
+        {
+          element: '#mobile-model-reset',
+          popover: {
+            title: 'Đặt lại góc nhìn',
+            description: 'Quay về góc nhìn mặc định.',
+            side: 'top',
             align: 'center'
           }
         },
@@ -471,24 +489,6 @@ export function startFileTour({ fileType, isMobile }: TourOptions) {
             description: 'Nhập bình luận cho mô hình.',
             side: 'top',
             align: 'center'
-          }
-        },
-        {
-          element: '#mobile-comment-attach-button',
-          popover: {
-            title: 'Đính kèm',
-            description: 'Đính kèm ảnh hoặc file.',
-            side: 'top',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-comment-draw-button',
-          popover: {
-            title: 'Vẽ ghi chú',
-            description: 'Vẽ ghi chú để giải thích.',
-            side: 'top',
-            align: 'start'
           }
         }
       ]

@@ -1,4 +1,4 @@
-import { useState, useRef, Suspense, forwardRef, useImperativeHandle, useLayoutEffect, useMemo } from 'react'
+import { useState, useRef, Suspense, forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useEffect } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, Environment, Html, useGLTF, Center, useMatcapTexture } from '@react-three/drei'
 import { Button } from '@/components/ui/button'
@@ -26,6 +26,7 @@ interface GLBViewerProps {
   autoRotate?: boolean
   className?: string
   initialCameraState?: { position: [number, number, number], target: [number, number, number] }
+  showMobileToolbar?: boolean
 }
 
 type RenderMode = 'standard' | 'wireframe' | 'matcap'
@@ -203,7 +204,7 @@ const SceneContent = forwardRef<GLBViewerRef, {
 })
 SceneContent.displayName = 'SceneContent'
 
-export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({ url, autoRotate: initialAutoRotate = false, className, initialCameraState }, ref) => {
+export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({ url, autoRotate: initialAutoRotate = false, className, initialCameraState, showMobileToolbar = false }, ref) => {
   const [autoRotate, setAutoRotate] = useState(initialAutoRotate)
   const [renderMode, setRenderMode] = useState<RenderMode>('standard')
   const [matcapType, setMatcapType] = useState<MatcapType>('clay')
@@ -213,8 +214,29 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({ url, autoRo
   const [envIntensity, setEnvIntensity] = useState(1)
   const [lightIntensity, setLightIntensity] = useState(1.2)
   const [showLightingPanel, setShowLightingPanel] = useState(false)
+  const [showMobileLightingPanel, setShowMobileLightingPanel] = useState(false)
   const [fileCameras, setFileCameras] = useState<THREE.Camera[]>([])
   const [selectedCamera, setSelectedCamera] = useState<string | null>('default')
+
+  // Close dropdowns on window resize for better responsive behavior
+  useEffect(() => {
+    let resizeTimeout: NodeJS.Timeout
+    
+    const handleResize = () => {
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(() => {
+        // Close all dropdowns on resize to prevent positioning issues
+        setShowLightingPanel(false)
+        setShowMobileLightingPanel(false)
+      }, 150)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => {
+      clearTimeout(resizeTimeout)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
 
   const internalRef = useRef<GLBViewerRef>(null)
 
@@ -295,8 +317,8 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({ url, autoRo
         </Suspense>
       </Canvas>
 
-      {/* Floating Toolbar */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex flex-col sm:flex-row items-center gap-2 sm:gap-1">
+      {/* Desktop Floating Toolbar - Hidden on mobile when showMobileToolbar is true */}
+      <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex-col sm:flex-row items-center gap-2 sm:gap-1 ${showMobileToolbar ? 'hidden sm:flex' : 'flex'}`}>
         {/* Main Toolbar */}
         <div className="glb-toolbar flex items-center gap-1 p-1.5 rounded-full bg-background/90 backdrop-blur border shadow-lg transition-opacity opacity-0 group-hover:opacity-100">
           <Button
@@ -487,6 +509,180 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({ url, autoRo
           </Button>
         </div>
       </div>
+
+      {/* Mobile Toolbar - Inside viewport at bottom center */}
+      {showMobileToolbar && (
+        <div id="mobile-3d-toolbar" className="sm:hidden absolute bottom-2 left-1/2 -translate-x-1/2 z-50">
+          <div className="flex items-center gap-1 p-1.5 bg-background/95 backdrop-blur border rounded-full shadow-lg">
+              <Button
+                id="mobile-model-auto-rotate"
+                variant={autoRotate ? "secondary" : "ghost"}
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-full"
+                onClick={() => setAutoRotate(!autoRotate)}
+                title="Tự động xoay"
+              >
+                <Rotate3d className="h-4 w-4" />
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    id="mobile-model-render-mode"
+                    variant={renderMode !== 'standard' ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8 shrink-0 rounded-full"
+                    title="Chế độ hiển thị"
+                  >
+                    {renderMode === 'matcap' ? <Circle className="h-4 w-4" /> : <Box className="h-4 w-4" />}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" side="top">
+                  <DropdownMenuItem onClick={() => setRenderMode('standard')}>
+                    <span className={renderMode === 'standard' ? 'font-semibold' : ''}>Standard</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setRenderMode('wireframe')}>
+                    <span className={renderMode === 'wireframe' ? 'font-semibold' : ''}>Wireframe</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Matcap</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => { setRenderMode('matcap'); setMatcapType('clay') }}>
+                    <span className={renderMode === 'matcap' && matcapType === 'clay' ? 'font-semibold' : ''}>Clay</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setRenderMode('matcap'); setMatcapType('metal') }}>
+                    <span className={renderMode === 'matcap' && matcapType === 'metal' ? 'font-semibold' : ''}>Metal</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setRenderMode('matcap'); setMatcapType('ceramic') }}>
+                    <span className={renderMode === 'matcap' && matcapType === 'ceramic' ? 'font-semibold' : ''}>Ceramic</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setRenderMode('matcap'); setMatcapType('plastic') }}>
+                    <span className={renderMode === 'matcap' && matcapType === 'plastic' ? 'font-semibold' : ''}>Plastic</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {fileCameras.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant={selectedCamera !== 'default' ? "secondary" : "ghost"}
+                      size="icon"
+                      className="h-8 w-8 shrink-0 rounded-full"
+                      title="Chọn camera"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" side="top">
+                    <DropdownMenuItem onClick={() => setSelectedCamera('default')}>
+                      <span className={selectedCamera === 'default' ? 'font-semibold' : ''}>Default View</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {fileCameras.map((cam, idx) => (
+                      <DropdownMenuItem key={idx} onClick={() => setSelectedCamera(idx.toString())}>
+                        <span className={selectedCamera === idx.toString() ? 'font-semibold' : ''}>
+                          {cam.name || `Camera ${idx + 1}`}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              <DropdownMenu open={showMobileLightingPanel} onOpenChange={setShowMobileLightingPanel}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 rounded-full"
+                    title="Ánh sáng"
+                  >
+                    <Lightbulb className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" side="top" className="w-64 p-3">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-medium mb-2 block">Environment</label>
+                      <select
+                        aria-label="Environment preset"
+                        className="w-full text-sm border border-border rounded px-2 py-1 bg-background text-foreground"
+                        value={envPreset}
+                        onChange={(e) => setEnvPreset(e.target.value)}
+                      >
+                        {envPresets.map(preset => (
+                          <option key={preset} value={preset}>{preset}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium mb-2 block">Env Intensity: {envIntensity.toFixed(1)}</label>
+                      <Slider
+                        value={[envIntensity]}
+                        onValueChange={([v]) => setEnvIntensity(v)}
+                        min={0}
+                        max={2}
+                        step={0.1}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium mb-2 block">Light Intensity: {lightIntensity.toFixed(1)}</label>
+                      <Slider
+                        value={[lightIntensity]}
+                        onValueChange={([v]) => setLightIntensity(v)}
+                        min={0}
+                        max={3}
+                        step={0.1}
+                      />
+                    </div>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button
+                variant={bgMode === 'light' ? "secondary" : "ghost"}
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-full"
+                onClick={() => setBgMode(prev => prev === 'light' ? 'transparent' : 'light')}
+                title="Nền sáng"
+              >
+                <Sun className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant={bgMode === 'dark' ? "secondary" : "ghost"}
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-full"
+                onClick={() => setBgMode(prev => prev === 'dark' ? 'transparent' : 'dark')}
+                title="Nền tối"
+              >
+                <Moon className="h-4 w-4" />
+              </Button>
+
+              <Button
+                id="mobile-model-screenshot"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-full"
+                onClick={handleScreenshot}
+                title="Chụp ảnh"
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+
+              <Button
+                id="mobile-model-reset"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-full hover:bg-destructive/10 hover:text-destructive"
+                onClick={handleReset}
+                title="Đặt lại"
+              >
+                <RefreshCcw className="h-4 w-4" />
+              </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 })
