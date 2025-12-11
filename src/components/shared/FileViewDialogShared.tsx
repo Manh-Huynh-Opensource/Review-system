@@ -31,7 +31,9 @@ import {
   Pencil,
   Check,
   FileText,
-  HelpCircle
+  HelpCircle,
+  Share2,
+  Copy
 } from 'lucide-react'
 import { startFileTour, hasSeenTour } from '@/lib/fileTours'
 import {
@@ -40,6 +42,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider'
 import { AddComment } from '@/components/comments/AddComment'
 import { CommentsList } from '@/components/comments/CommentsList'
@@ -163,7 +170,26 @@ export function FileViewDialogShared({
   const [pdfPage, setPdfPage] = useState(1)
   const [commentWidth, setCommentWidth] = useState(350)
   const [isResizing, setIsResizing] = useState(false)
+  const [copied, setCopied] = useState(false)
   const resizingState = useRef({ startX: 0, startWidth: 350 })
+
+  // Generate shareable link for this file
+  const getShareLink = useCallback(() => {
+    const baseUrl = window.location.origin
+    return `${baseUrl}/review/${_projectId}/file/${file?.id}`
+  }, [_projectId, file?.id])
+
+  const copyShareLink = useCallback(async () => {
+    const link = getShareLink()
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      toast.success('Đã sao chép link chia sẻ!')
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      toast.error('Không thể sao chép link')
+    }
+  }, [getShareLink])
 
   // Tour Logic - delegated to fileTours module for better maintainability
   const handleStartTour = () => {
@@ -1375,6 +1401,20 @@ export function FileViewDialogShared({
                       </a>
                     </DropdownMenuItem>
 
+                    <DropdownMenuItem onClick={copyShareLink}>
+                      {copied ? (
+                        <>
+                          <Check className="w-4 h-4 mr-2 text-green-500" />
+                          Đã sao chép link!
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="w-4 h-4 mr-2" />
+                          Chia sẻ link
+                        </>
+                      )}
+                    </DropdownMenuItem>
+
                     <DropdownMenuItem onClick={() => setShowComments(!showComments)}>
                       <MessageSquare className="w-4 h-4 mr-2" />
                       {showComments ? 'Ẩn bình luận' : 'Hiện bình luận'}
@@ -1420,6 +1460,40 @@ export function FileViewDialogShared({
                   <span className="md:hidden">Tải</span>
                 </a>
               </Button>
+
+              {/* Share Button */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="hidden sm:flex">
+                    <Share2 className="w-4 h-4 mr-2" />
+                    <span className="hidden md:inline">Chia sẻ</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <h4 className="font-medium text-sm">Chia sẻ file</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Bất kỳ ai có link đều có thể xem file này
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        readOnly 
+                        value={getShareLink()} 
+                        className="text-xs h-8"
+                      />
+                      <Button size="sm" className="h-8 px-2" onClick={copyShareLink}>
+                        {copied ? (
+                          <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
               <Button
                 variant={showComments ? 'secondary' : 'outline'}

@@ -159,10 +159,10 @@ export function AdminLayout() {
             <NotificationBell />
             <Separator orientation="vertical" className="h-5 hidden sm:block" />
 
-            {/* User Menu */}
+            {/* User Menu - Hidden on mobile, visible on desktop */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1.5 h-9">
+                <Button variant="ghost" size="sm" className="hidden md:flex gap-1.5 h-9">
                   <User className="h-4 w-4" />
                   <span className="hidden lg:inline max-w-[120px] truncate text-sm">{user?.email}</span>
                   <ChevronDown className="h-3 w-3 hidden sm:block" />

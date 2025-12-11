@@ -21,7 +21,7 @@ import { getSecureDownloadUrl } from '@/lib/secureStorage'
 import type { File as FileType } from '@/types'
 
 export default function ReviewPage() {
-  const { projectId } = useParams<{ projectId: string }>()
+  const { projectId, fileId } = useParams<{ projectId: string; fileId?: string }>()
   const { project, fetchProject } = useProjectStore()
   const { files, subscribeToFiles, switchVersion, cleanup: cleanupFiles } = useFileStore()
   const { comments, subscribeToComments, addComment, editComment, deleteComment, cleanup: cleanupComments } = useCommentStore()
@@ -153,6 +153,17 @@ export default function ReviewPage() {
       document.title = 'Review System'
     }
   }, [project])
+
+  // Auto-open file dialog if fileId is provided in URL
+  useEffect(() => {
+    if (fileId && files && files.length > 0 && !selectedFile) {
+      const targetFile = files.find(f => f.id === fileId)
+      if (targetFile) {
+        setSelectedFile(targetFile)
+        setDialogOpen(true)
+      }
+    }
+  }, [fileId, files, selectedFile])
 
   const handleUserNameChange = (name: string) => {
     setCurrentUserName(name)

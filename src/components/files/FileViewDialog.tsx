@@ -17,7 +17,11 @@ import {
   Video, 
   Box,
   ChevronDown,
-  MessageSquare
+  MessageSquare,
+  Share2,
+  Check,
+  Copy,
+  MoreHorizontal
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -25,11 +29,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Input } from '@/components/ui/input'
 import { GLBViewer } from '@/components/viewers/GLBViewer'
 import { AddComment } from '@/components/comments/AddComment'
 import { CommentsList } from '@/components/comments/CommentsList'
 import { useCommentStore } from '@/stores/comments'
 import { useAuthStore } from '@/stores/auth'
+import toast from 'react-hot-toast'
 
 interface Props {
   file: FileType | null
@@ -62,7 +73,26 @@ export function FileViewDialog({ file, projectId, resolvedUrl, open, onOpenChang
   })
   const [showComments, setShowComments] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
+  const [copied, setCopied] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+
+  // Generate shareable link for this file
+  const getShareLink = () => {
+    const baseUrl = window.location.origin
+    return `${baseUrl}/review/${projectId}/file/${file?.id}`
+  }
+
+  const copyShareLink = async () => {
+    const link = getShareLink()
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      toast.success('Đã sao chép link chia sẻ!')
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      toast.error('Không thể sao chép link')
+    }
+  }
 
   if (!file) return null
 
@@ -168,11 +198,11 @@ export function FileViewDialog({ file, projectId, resolvedUrl, open, onOpenChang
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {/* Version selector */}
+              {/* Desktop: Version selector */}
               {file.versions.length > 1 && onSwitchVersion && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="hidden sm:flex">
                       V{file.currentVersion}
                       <ChevronDown className="w-3 h-3 ml-1" />
                     </Button>
@@ -192,10 +222,11 @@ export function FileViewDialog({ file, projectId, resolvedUrl, open, onOpenChang
                 </DropdownMenu>
               )}
 
-              {/* Download button */}
+              {/* Desktop: Download button */}
               <Button
                 variant="outline"
                 size="sm"
+                className="hidden sm:flex"
                 onClick={(e) => {
                   e.stopPropagation()
                   effectiveUrl && window.open(effectiveUrl, '_blank')
@@ -204,6 +235,89 @@ export function FileViewDialog({ file, projectId, resolvedUrl, open, onOpenChang
                 <Download className="w-4 h-4 mr-2" />
                 Tải xuống
               </Button>
+
+              {/* Desktop: Share button */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="hidden sm:flex">
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Chia sẻ
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <h4 className="font-medium text-sm">Chia sẻ file</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Bất kỳ ai có link đều có thể xem file này
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        readOnly 
+                        value={getShareLink()} 
+                        className="text-xs h-8"
+                      />
+                      <Button size="sm" className="h-8 px-2" onClick={copyShareLink}>
+                        {copied ? (
+                          <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Mobile: Dropdown menu with all actions */}
+              <div className="sm:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    {file.versions.length > 1 && onSwitchVersion && (
+                      <>
+                        <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
+                          Phiên bản
+                        </div>
+                        {file.versions.map(v => (
+                          <DropdownMenuItem
+                            key={v.version}
+                            onClick={() => onSwitchVersion(file.id, v.version)}
+                            className={v.version === file.currentVersion ? 'bg-accent' : ''}
+                          >
+                            V{v.version} {v.version === file.currentVersion && '(hiện tại)'}
+                          </DropdownMenuItem>
+                        ))}
+                        <div className="h-px bg-border my-1" />
+                      </>
+                    )}
+                    <DropdownMenuItem
+                      onClick={() => effectiveUrl && window.open(effectiveUrl, '_blank')}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Tải xuống
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={copyShareLink}>
+                      {copied ? (
+                        <>
+                          <Check className="w-4 h-4 mr-2 text-green-500" />
+                          Đã sao chép link!
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="w-4 h-4 mr-2" />
+                          Chia sẻ link
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
         </DialogHeader>

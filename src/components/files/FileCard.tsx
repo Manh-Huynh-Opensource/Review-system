@@ -85,6 +85,17 @@ export function FileCard({ file, resolvedUrl, commentCount, onClick }: Props) {
           </Badge>
         </div>
 
+        {/* Version badge */}
+        <div className="absolute top-2 right-2">
+          <Badge 
+            variant="outline" 
+            className="text-xs backdrop-blur-sm bg-background/90 border-primary/30"
+            title={`Phiên bản ${current?.version}${current?.versionLabel ? ` (${current.versionLabel})` : ''} - ${format(uploadDate, 'dd/MM/yy HH:mm')}`}
+          >
+            {current?.versionLabel || `v${current?.version}`}
+          </Badge>
+        </div>
+
         {/* Comment count badge */}
         {commentCount > 0 && (
           <div className="absolute bottom-2 right-2">

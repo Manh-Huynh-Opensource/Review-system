@@ -9,9 +9,11 @@
 - 📁 Quản lý Projects và Files (stores: `src/stores/projects.ts`, `src/stores/files.ts`)
 - 📤 Upload files: image (PNG/JPG/WebP), video (MP4), PDF, image sequences và 3D models (GLB) (`src/components/files/FileUploader.tsx`, `SequenceUploader.tsx`)
 - 🔄 Versioning: mỗi file có phiên bản, có thể chuyển giữa các version trong `FileViewDialog.tsx`
+- 📌 **Version badge**: Hiển thị thông tin phiên bản (v1, v2,...) trực tiếp trên thumbnail file card
 - 💬 Quản lý bình luận realtime, resolve/unresolve (`src/stores/comments.ts`, `CommentsList.tsx`)
 - ✏️ Annotation tools: `AnnotationCanvasKonva.tsx` + `AnnotationToolbar.tsx` (pen/rect/arrow/undo/redo)
 - 🔗 Public review links: có hỗ trợ mở link review cho reviewer (cơ chế public read theo mặc định; xem phần Security)
+- 🔗 **Share file link**: Chia sẻ link trực tiếp tới file cụ thể — khi mở link sẽ tự động hiện dialog xem file
 
 ### Client (Reviewer)
 - 🚫 Có thể truy cập mà không cần đăng ký (public reviewer flow)

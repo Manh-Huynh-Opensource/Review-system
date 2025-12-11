@@ -42,6 +42,10 @@ export interface FileVersion {
     position: [number, number, number]
     target: [number, number, number]
   }
+  // Extended version metadata
+  versionLabel?: string // Human-readable version label (e.g., "Final", "Draft 1", "v2.1")
+  versionNotes?: string // Optional notes about this version
+  isLatest?: boolean // Computed field for UI convenience
   metadata: {
     size: number
     type: string

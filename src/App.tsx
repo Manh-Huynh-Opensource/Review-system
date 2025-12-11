@@ -95,6 +95,14 @@ const router = createBrowserRouter([
           </Suspense>
         ),
       },
+      {
+        path: 'file/:fileId',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <ReviewPage />
+          </Suspense>
+        ),
+      },
     ],
   },
   {
