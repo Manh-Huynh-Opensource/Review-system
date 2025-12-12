@@ -197,7 +197,11 @@ const SceneContent = forwardRef<GLBViewerRef, {
         onCamerasDetected={props.onCamerasDetected}
       />
 
-      <Environment preset={props.envPreset as any} />
+      {props.envPreset === 'city' ? (
+        <Environment files="/assets/env/potsdamer_platz_1k.hdr" />
+      ) : (
+        <Environment preset={props.envPreset as any} />
+      )}
       <ambientLight intensity={props.envIntensity * 0.6} />
       <directionalLight position={[5, 5, 5]} intensity={props.lightIntensity} castShadow />
       <OrbitControls ref={controlsRef} autoRotate={props.autoRotate} enablePan enableZoom enableRotate makeDefault />
