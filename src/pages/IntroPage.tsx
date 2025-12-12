@@ -150,7 +150,7 @@ export default function IntroPage() {
             <footer className="py-8 text-center text-muted-foreground text-sm border-t border-border">
                 <p>{t.footer}</p>
                 <p className="mt-2">
-                    <a href="https://github.com/manhhuynh-designer/Review-system" className="hover:underline hover:text-primary transition-colors">
+                    <a href="https://github.com/Manh-Huynh-Opensource/Review-system" className="hover:underline hover:text-primary transition-colors">
                         {t.viewOnGithub}
                     </a>
                 </p>

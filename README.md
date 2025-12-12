@@ -45,7 +45,7 @@ A web application for reviewing creative assets (images, videos, image sequences
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/manhhuynh-designer/Review-system.git
+    git clone https://github.com/Manh-Huynh-Opensource/Review-system.git
     cd Review-system
     ```
 
