@@ -135,6 +135,7 @@ export function VideoSettingsMenu({
         <Popover>
             <PopoverTrigger asChild>
                 <Button
+                    id="video-controls-settings"
                     variant="ghost"
                     size="icon"
                     className="control-btn"

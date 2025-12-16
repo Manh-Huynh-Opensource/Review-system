@@ -124,6 +124,15 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           }
         },
         {
+          element: '#video-controls-settings',
+          popover: {
+            title: 'Cài đặt Overlay',
+            description: 'Mở menu để chọn Safe Zone và Composition Guides. Tùy chỉnh màu sắc và độ trong suốt của các đường hướng dẫn.',
+            side: 'top',
+            align: 'center'
+          }
+        },
+        {
           element: '#mobile-nav-toggle',
           popover: {
             title: 'Chế độ điều hướng',
@@ -185,6 +194,15 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           popover: {
             title: 'Xuất Frame',
             description: 'Nhấn vào đây để xuất ảnh PNG của frame hiện tại.',
+            side: 'top',
+            align: 'center'
+          }
+        },
+        {
+          element: '#video-controls-settings',
+          popover: {
+            title: 'Overlay Settings',
+            description: 'Mở menu để chọn Safe Zone (vùng an toàn) và Composition Guides (đường hướng dẫn bố cục). Điều chỉnh màu sắc và độ trong suốt để phù hợp với công việc của bạn.',
             side: 'top',
             align: 'center'
           }
