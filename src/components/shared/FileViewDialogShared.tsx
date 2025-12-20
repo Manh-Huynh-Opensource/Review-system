@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import {
   Download,
@@ -26,7 +25,6 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
   Camera,
   Pencil,
   Check,
@@ -1405,21 +1403,19 @@ export function FileViewDialogShared({
                         <>
                           <div className="h-px bg-border my-1" />
                           <div className="p-2">
-                            {onUploadNewVersion && (
-                              <UploadDialog
-                                projectId={_projectId}
-                                existingFileId={file.id}
-                                trigger={
-                                  <Button
-                                    className="w-full justify-start"
-                                    variant="ghost"
-                                  >
-                                    <Upload className="w-4 h-4 mr-2" />
-                                    Tải lên phiên bản mới
-                                  </Button>
-                                }
-                              />
-                            )}
+                            <UploadDialog
+                              projectId={_projectId}
+                              existingFileId={file.id}
+                              trigger={
+                                <Button
+                                  className="w-full justify-start"
+                                  variant="ghost"
+                                >
+                                  <Upload className="w-4 h-4 mr-2" />
+                                  Tải lên phiên bản mới
+                                </Button>
+                              }
+                            />
                           </div>
                         </>
                       )}
