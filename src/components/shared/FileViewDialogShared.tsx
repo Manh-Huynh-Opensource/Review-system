@@ -1456,19 +1456,16 @@ export function FileViewDialogShared({
                         <>
                           <div className="h-px bg-border my-1" />
                           <div className="p-2">
-                            <UploadDialog
-                              projectId={_projectId}
-                              existingFileId={file.id}
-                              trigger={
-                                <Button
-                                  className="w-full justify-start"
-                                  variant="ghost"
-                                >
-                                  <Upload className="w-4 h-4 mr-2" />
-                                  Tải lên phiên bản mới
-                                </Button>
-                              }
-                            />
+                            <DropdownMenuItem
+                              className="w-full justify-start cursor-pointer"
+                              onSelect={(e) => {
+                                e.preventDefault()
+                                setShowUploadDialog(true)
+                              }}
+                            >
+                              <Upload className="w-4 h-4 mr-2" />
+                              Tải lên phiên bản mới
+                            </DropdownMenuItem>
                           </div>
                         </>
                       )}

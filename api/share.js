@@ -1,0 +1,132 @@
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Environment variable for Service Account (Needs to be set in Vercel project settings)
+// Value should be the minified JSON string of the service account key
+const SERVICE_ACCOUNT = process.env.FIREBASE_SERVICE_ACCOUNT
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+    : null;
+
+if (!getApps().length && SERVICE_ACCOUNT) {
+    initializeApp({
+        credential: cert(SERVICE_ACCOUNT)
+    });
+} else if (!getApps().length) {
+    console.error("FIREBASE_SERVICE_ACCOUNT env var is missing!");
+}
+
+const db = getFirestore();
+
+export default async function handler(req, res) {
+    // Parsing path segments from the request URL
+    // Expected URL: /share/p/:projectId/file/:fileId or /share/p/:projectId
+    // Vercel passes the full URL, we can parse it
+
+    // Note: req.url in Vercel function will be the rewritten path if used via rewrite, 
+    // or the direct path.
+    // Let's assume the rewrite rule sends /share/p/... to this function
+
+    const { url } = req;
+    const pathParts = url.split('/').filter(p => p);
+
+    let projectId = null;
+    let fileId = null;
+
+    const pIndex = pathParts.indexOf('p');
+    if (pIndex !== -1 && pathParts[pIndex + 1]) {
+        projectId = pathParts[pIndex + 1];
+    }
+
+    const fIndex = pathParts.indexOf('file');
+    if (fIndex !== -1 && pathParts[fIndex + 1]) {
+        fileId = pathParts[fIndex + 1];
+    }
+
+    if (!projectId) {
+        // If no project ID, just redirect home
+        return res.redirect('/');
+    }
+
+    try {
+        let title = 'Review System';
+        let image = null;
+
+        if (fileId) {
+            // Fetch File Data
+            const fileDoc = await db.collection('projects').doc(projectId).collection('files').doc(fileId).get();
+            if (fileDoc.exists) {
+                const data = fileDoc.data();
+                title = data.name || 'File';
+
+                // Find best thumbnail
+                const currentVersion = data.currentVersion || 1;
+                const versionData = data.versions?.find(v => v.version === currentVersion);
+
+                if (versionData) {
+                    image = versionData.thumbnail || versionData.poster || versionData.url;
+                }
+            }
+        } else {
+            // Fetch Project Data
+            const projectDoc = await db.collection('projects').doc(projectId).get();
+            if (projectDoc.exists) {
+                const data = projectDoc.data();
+                title = data.name || 'Dự án';
+            }
+        }
+
+        // Determine the destination URL (the Vercel app itself)
+        // We want to redirect the user to the actual "clean" URL handled by React Router
+        // e.g. /review/PROJECT_ID/file/FILE_ID
+        // Host header is the domain the user accessed
+        const host = req.headers.host;
+        const protocol = req.headers['x-forwarded-proto'] || 'https';
+        let appUrl = `${protocol}://${host}`;
+
+        if (fileId) {
+            appUrl = `${appUrl}/review/${projectId}/file/${fileId}`;
+        } else {
+            appUrl = `${appUrl}/review/${projectId}`;
+        }
+
+        // Check User Agent
+        const userAgent = req.headers['user-agent'] || '';
+        const isBot = /facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegram|skype|slack/i.test(userAgent);
+
+        if (isBot) {
+            const html = `
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="${appUrl}">
+    <meta property="og:title" content="${title}">
+    <meta property="og:description" content="Chia sẻ từ Review System">
+    ${image ? `<meta property="og:image" content="${image}">` : ''}
+
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="${appUrl}">
+    <meta property="twitter:title" content="${title}">
+    <meta property="twitter:description" content="Chia sẻ từ Review System">
+    ${image ? `<meta property="twitter:image" content="${image}">` : ''}
+</head>
+<body>
+    <h1>Đang chuyển hướng...</h1>
+</body>
+</html>
+        `;
+            res.status(200).send(html);
+        } else {
+            // Human -> Redirect
+            res.redirect(appUrl);
+        }
+
+    } catch (error) {
+        console.error('Error fetching metadata:', error);
+        // On error, just redirect safely
+        res.redirect('/');
+    }
+}

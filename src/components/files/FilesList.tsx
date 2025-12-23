@@ -38,7 +38,7 @@ const getFileTypeLabel = (type: string) => {
 }
 
 export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', searchTerm = '' }: FilesListProps) {
-  const { files, switchVersion, uploading, deleteFile, deleting, uploadFile, setSequenceViewMode, updateFrameCaption, renameFile, toggleFileLock, selectedFile: storeSelectedFile, selectFile: storeSelectFile } = useFileStore()
+  const { files, switchVersion, deleteFile, deleting, uploadFile, setSequenceViewMode, updateFrameCaption, renameFile, toggleFileLock, selectedFile: storeSelectedFile, selectFile: storeSelectFile } = useFileStore()
   const { comments, subscribeToComments, addComment, toggleResolve, editComment, deleteComment, cleanup: cleanupComments } = useCommentStore()
   const { user } = useAuthStore()
   const project = useProjectStore(s => s.project)
@@ -344,16 +344,18 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
     }
   }
 
-  if (uploading) {
-    return (
-      <div className="text-center py-8">
-        <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-          Đang xử lý file...
-        </div>
-      </div>
-    )
-  }
+  // REMOVED: Full page spinner during upload to prevent list from disappearing
+  // The progress is now handled by UploadDialog or global indicators
+  // if (uploading) {
+  //   return (
+  //     <div className="text-center py-8">
+  //       <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+  //         <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+  //         Đang xử lý file...
+  //       </div>
+  //     </div>
+  //   )
+  // }
 
   if (!filteredAndSortedFiles.length) {
     if (searchTerm.trim()) {
