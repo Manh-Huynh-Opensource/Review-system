@@ -100,7 +100,12 @@ export default async function handler(req, res) {
         title = `DEBUG ERROR: ${error.message}`; // Show error in title for debugging
     }
 
-    // Determine destination URL
+    // Canonical URL for og:url (points to share page so bots don't re-crawl SPA)
+    let canonicalUrl = appUrlOrigin;
+    if (projectId) canonicalUrl += `/share/p/${projectId}`;
+    if (fileId) canonicalUrl += `/file/${fileId}`;
+
+    // Destination URL for human redirect (points to actual app)
     let destUrl = appUrlOrigin;
     if (projectId) destUrl += `/review/${projectId}`;
     if (fileId) destUrl += `/file/${fileId}`;
@@ -115,14 +120,14 @@ export default async function handler(req, res) {
     
     <!-- Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="${destUrl}">
+    <meta property="og:url" content="${canonicalUrl}">
     <meta property="og:title" content="${title}">
     <meta property="og:description" content="${description} ${debugError ? `(Debug: ${debugError})` : ''}">
     ${image ? `<meta property="og:image" content="${image}">` : ''}
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="${destUrl}">
+    <meta property="twitter:url" content="${canonicalUrl}">
     <meta property="twitter:title" content="${title}">
     <meta property="twitter:description" content="${description} ${debugError ? `(Debug: ${debugError})` : ''}">
     ${image ? `<meta property="twitter:image" content="${image}">` : ''}
