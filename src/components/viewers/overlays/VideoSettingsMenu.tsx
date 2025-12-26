@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover, PopoverContentNoPortal, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
@@ -132,7 +132,7 @@ export function VideoSettingsMenu({
     }, {} as Record<string, typeof COMPOSITION_GUIDE_OPTIONS>)
 
     return (
-        <Popover>
+        <Popover modal={false}>
             <PopoverTrigger asChild>
                 <Button
                     id="video-controls-settings"
@@ -144,7 +144,7 @@ export function VideoSettingsMenu({
                     <Grid3X3 className="w-5 h-5" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-3" side="top" align="end">
+            <PopoverContentNoPortal className="w-80 p-3 z-[9999]" side="top" align="end" sideOffset={8}>
                 <div className="space-y-4">
                     {/* Appearance Controls */}
                     <div>
@@ -297,7 +297,7 @@ export function VideoSettingsMenu({
                         </div>
                     </div>
                 </div>
-            </PopoverContent>
+            </PopoverContentNoPortal>
         </Popover>
     )
 }

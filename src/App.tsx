@@ -112,6 +112,28 @@ const router = createBrowserRouter([
     ],
   },
   {
+    path: '/share/p/:projectId',
+    element: <PublicLayout />,
+    children: [
+      {
+        index: true,
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <ReviewPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'file/:fileId',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <ReviewPage />
+          </Suspense>
+        ),
+      },
+    ],
+  },
+  {
     path: '/',
     element: (
       <Suspense fallback={<PageLoader />}>

@@ -293,6 +293,22 @@
     z-index: 100;
 }
 
+/* Overlay container visibility in fullscreen */
+.custom-video-player:fullscreen .video-overlay-container,
+.custom-video-player:-webkit-full-screen .video-overlay-container,
+.custom-video-player:-moz-full-screen .video-overlay-container {
+    z-index: 20 !important;
+    pointer-events: none;
+}
+
+/* Settings menu popover works in fullscreen */
+.custom-video-player:fullscreen .controls-right,
+.custom-video-player:-webkit-full-screen .controls-right,
+.custom-video-player:-moz-full-screen .controls-right {
+    z-index: 50;
+    position: relative;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .video-controls {

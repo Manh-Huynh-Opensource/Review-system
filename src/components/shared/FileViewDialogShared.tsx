@@ -33,7 +33,9 @@ import {
   Share2,
   Copy,
   ShieldAlert,
-  Trash2
+  Trash2,
+  Volume2,
+  VolumeX
 } from 'lucide-react'
 import { startFileTour, hasSeenTour } from '@/lib/fileTours'
 import {
@@ -61,6 +63,7 @@ import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
 import type { AnnotationObject } from '@/types'
 import type { GLBViewerRef } from '@/components/viewers/GLBViewer'
 import { useFileStore } from '@/stores/files'
+import { useVideoComparison } from '@/hooks/useVideoComparison'
 import toast from 'react-hot-toast'
 
 const GLBViewer = lazy(() => import('@/components/viewers/GLBViewer').then(m => ({ default: m.GLBViewer })))
@@ -230,6 +233,13 @@ export function FileViewDialogShared({
 
   // File store for sequence frame operations
   const { reorderSequenceFrames, deleteSequenceFrames, deleteVersion } = useFileStore()
+
+  // Video comparison hook
+  const videoComparison = useVideoComparison({
+    primaryVersion: currentVersion,
+    versions: file?.versions.map(v => ({ version: v.version, url: v.url })) || [],
+    onSeek: (time) => setCurrentTime(time)
+  })
 
   // Memoize video player callbacks to prevent CustomVideoPlayer re-renders
   const handleTimeUpdate = useCallback((time: number) => {
@@ -1181,6 +1191,92 @@ export function FileViewDialogShared({
         }
       }
 
+      // VIDEO COMPARISON VIEW
+      if (videoComparison.isComparing && videoComparison.secondaryUrl) {
+        return (
+          <div className="space-y-2 w-full h-full flex flex-col">
+            {/* Comparison Videos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 flex-1 min-h-0 bg-black p-2">
+              {/* PRIMARY VIDEO */}
+              <div className="relative flex flex-col min-h-0">
+                <div className="flex items-center justify-between px-2 py-1 bg-black/70">
+                  <span className="text-xs text-white font-medium">v{currentVersion} (Chính)</span>
+                  <Button
+                    size="sm"
+                    variant={videoComparison.activeAudio === 'primary' ? 'secondary' : 'ghost'}
+                    className="h-6 px-2 text-xs"
+                    onClick={videoComparison.toggleAudio}
+                    title={videoComparison.activeAudio === 'primary' ? 'Đang phát âm thanh' : 'Bật âm thanh'}
+                  >
+                    {videoComparison.activeAudio === 'primary' ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                  </Button>
+                </div>
+                <video
+                  ref={videoComparison.primaryVideoRef}
+                  src={effectiveUrl}
+                  controls
+                  className="w-full h-auto max-h-[45vh] object-contain flex-1"
+                  onPlay={() => videoComparison.handlePrimaryEvent('play')}
+                  onPause={() => videoComparison.handlePrimaryEvent('pause')}
+                  onSeeked={(e) => videoComparison.handlePrimaryEvent('seeked', e.currentTarget.currentTime)}
+                  onTimeUpdate={(e) => {
+                    setCurrentTime(e.currentTarget.currentTime)
+                    videoComparison.handlePrimaryEvent('timeupdate', e.currentTarget.currentTime)
+                  }}
+                  muted={videoComparison.activeAudio !== 'primary'}
+                />
+              </div>
+
+              {/* SECONDARY VIDEO */}
+              <div className="relative flex flex-col min-h-0">
+                <div className="flex items-center justify-between px-2 py-1 bg-black/70">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
+                        v{videoComparison.secondaryVersion}
+                        <ChevronDown className="w-3 h-3 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {file.versions
+                        .filter(v => v.version !== currentVersion)
+                        .map(v => (
+                          <DropdownMenuItem
+                            key={v.version}
+                            onClick={() => videoComparison.setSecondaryVersion(v.version)}
+                            className={v.version === videoComparison.secondaryVersion ? 'bg-accent' : ''}
+                          >
+                            Version {v.version}
+                          </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    size="sm"
+                    variant={videoComparison.activeAudio === 'secondary' ? 'secondary' : 'ghost'}
+                    className="h-6 px-2 text-xs"
+                    onClick={videoComparison.toggleAudio}
+                    title={videoComparison.activeAudio === 'secondary' ? 'Đang phát âm thanh' : 'Bật âm thanh'}
+                  >
+                    {videoComparison.activeAudio === 'secondary' ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                  </Button>
+                </div>
+                <video
+                  ref={videoComparison.secondaryVideoRef}
+                  src={videoComparison.secondaryUrl}
+                  controls
+                  className="w-full h-auto max-h-[45vh] object-contain flex-1"
+                  onPlay={() => videoComparison.handleSecondaryEvent('play')}
+                  onPause={() => videoComparison.handleSecondaryEvent('pause')}
+                  onSeeked={(e) => videoComparison.handleSecondaryEvent('seeked', e.currentTarget.currentTime)}
+                  muted={videoComparison.activeAudio !== 'secondary'}
+                />
+              </div>
+            </div>
+          </div>
+        )
+      }
+
       return (
         <div className="space-y-2 sm:space-y-3 w-full h-full flex flex-col">
           {/* Video Player - Better space utilization */}
@@ -1502,6 +1598,21 @@ export function FileViewDialogShared({
                 <HelpCircle className="w-4 h-4" />
                 <span className="sr-only">Hướng dẫn</span>
               </Button>
+
+              {/* Video Compare Button - Desktop */}
+              {file.type === 'video' && file.versions.length > 1 && (
+                <Button
+                  id="header-video-compare-btn"
+                  variant={videoComparison.isComparing ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-9 w-9 px-0 hidden sm:flex"
+                  onClick={videoComparison.toggleCompare}
+                  title={videoComparison.isComparing ? 'Tắt so sánh' : 'So sánh phiên bản'}
+                >
+                  <Columns className="w-4 h-4" />
+                  <span className="sr-only">So sánh phiên bản</span>
+                </Button>
+              )}
 
               {/* Share & Download Group */}
               <div id="header-share-download-group" className="flex items-center gap-1">

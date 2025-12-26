@@ -205,6 +205,15 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
       steps = [
         ...headerSteps,
         {
+          element: '#header-video-compare-btn',
+          popover: {
+            title: 'So sánh phiên bản',
+            description: 'Bật chế độ so sánh để xem hai phiên bản video cạnh nhau với playback đồng bộ.',
+            side: 'bottom',
+            align: 'start'
+          }
+        },
+        {
           element: '#preview-container',
           popover: {
             title: 'Trình phát Video',
