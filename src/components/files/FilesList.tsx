@@ -123,7 +123,6 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
       }
     }
     run()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files, projectId])
 
   // Subscribe to comments for this project

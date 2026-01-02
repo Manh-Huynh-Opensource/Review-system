@@ -371,7 +371,7 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
             const projectIds = projects.map(p => p.id)
 
             let files: FileWithProject[] = []
-            let comments: Comment[] = []
+            const comments: Comment[] = []
 
             // Get files if needed
             if (type === 'files' || type === 'all') {
