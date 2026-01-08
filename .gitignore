@@ -31,3 +31,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Security & Credentials
+*.pem
+*.key
+*.p12
+serviceAccountKey.json
+adminsdk-*.json
+.runtimeconfig.json
+
+# Logs & Coverage
+*.log
+coverage/
