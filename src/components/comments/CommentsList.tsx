@@ -28,7 +28,9 @@ interface CommentsListProps {
   isAdmin?: boolean
   onEdit?: (commentId: string, newContent: string) => Promise<void>
   onDelete?: (commentId: string) => Promise<void>
+
   isLocked?: boolean
+  showVersionBadge?: boolean
 }
 
 export function CommentsList({
@@ -43,6 +45,7 @@ export function CommentsList({
   onEdit,
   onDelete,
   isLocked = false,
+  showVersionBadge = false,
 }: CommentsListProps) {
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
@@ -209,6 +212,11 @@ export function CommentsList({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-sm">{comment.userName}</span>
+                {showVersionBadge && (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1 bg-muted/50 border-muted-foreground/30 text-muted-foreground">
+                    v{comment.version}
+                  </Badge>
+                )}
                 <span className="text-xs text-muted-foreground">•</span>
                 <span className="text-xs text-muted-foreground">
                   {formatDistanceToNow(comment.createdAt.toDate(), {

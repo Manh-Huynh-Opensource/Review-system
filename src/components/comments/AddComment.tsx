@@ -41,7 +41,7 @@ export function AddComment({
     const [userName, setUserName] = useState(initialUserName || '')
     const [content, setContent] = useState('')
     const [submitting, setSubmitting] = useState(false)
-    
+
     // Anti-spam measures
     const [honeypotWebsite, setHoneypotWebsite] = useState('')
     const [honeypotPhone, setHoneypotPhone] = useState('')
@@ -108,30 +108,30 @@ export function AddComment({
 
         // Anti-spam validation
         const timeSpent = Date.now() - startTimeRef.current
-        
+
         // Check honeypot fields (should be empty)
         if (honeypotWebsite || honeypotPhone || honeypotEmail) {
             console.warn('Bot detected: honeypot fields filled')
             return
         }
-        
+
         // Minimum time check (human users take time to type)
         if (timeSpent < 3000) {
             toast.error('Vui lòng đợi một chút trước khi gửi bình luận')
             return
         }
-        
+
         // Content length validation
         if (content.trim().length < 5) {
             toast.error('Bình luận quá ngắn (tối thiểu 5 ký tự)')
             return
         }
-        
+
         if (content.trim().length > 2000) {
             toast.error('Bình luận quá dài (tối đa 2000 ký tự)')
             return
         }
-        
+
         if (userName.trim().length > 100) {
             toast.error('Tên quá dài (tối đa 100 ký tự)')
             return
@@ -258,32 +258,32 @@ export function AddComment({
         <form onSubmit={handleSubmit} className="space-y-3">
             {/* Honeypot fields - hidden from users, visible to bots */}
             <div className="hidden" aria-hidden="true">
-                <input 
-                    type="text" 
-                    name="website" 
+                <input
+                    type="text"
+                    name="website"
                     value={honeypotWebsite}
                     onChange={(e) => setHoneypotWebsite(e.target.value)}
                     tabIndex={-1}
                     autoComplete="off"
                 />
-                <input 
-                    type="tel" 
-                    name="phone" 
+                <input
+                    type="tel"
+                    name="phone"
                     value={honeypotPhone}
                     onChange={(e) => setHoneypotPhone(e.target.value)}
                     tabIndex={-1}
                     autoComplete="off"
                 />
-                <input 
-                    type="email" 
-                    name="email" 
+                <input
+                    type="email"
+                    name="email"
                     value={honeypotEmail}
                     onChange={(e) => setHoneypotEmail(e.target.value)}
                     tabIndex={-1}
                     autoComplete="off"
                 />
             </div>
-            
+
             {!initialUserName && (
                 <Input
                     placeholder="Tên của bạn"
@@ -391,6 +391,7 @@ export function AddComment({
 
                         {/* Insert Link */}
                         <Button
+                            id={isMobile ? "mobile-comment-link-button" : "comment-link-button"}
                             type="button"
                             size="sm"
                             variant="ghost"
@@ -452,8 +453,8 @@ export function AddComment({
                     </Button>
                 </div>
             </div>
-            
-            <LinkDialog 
+
+            <LinkDialog
                 open={showLinkDialog}
                 onOpenChange={setShowLinkDialog}
                 onInsert={insertMarkdownLink}

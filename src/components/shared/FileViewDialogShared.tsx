@@ -35,7 +35,8 @@ import {
   ShieldAlert,
   Trash2,
   Volume2,
-  VolumeX
+  VolumeX,
+  Layers
 } from 'lucide-react'
 import { startFileTour, hasSeenTour } from '@/lib/fileTours'
 import {
@@ -142,6 +143,7 @@ export function FileViewDialogShared({
 }: Props) {
   const [showComments, setShowComments] = useState(true)
   const [showOnlyCurrentTimeComments, setShowOnlyCurrentTimeComments] = useState(false)
+  const [viewAllVersions, setViewAllVersions] = useState(false)
 
   const [currentTime, setCurrentTime] = useState(0)
   const [currentFrame, setCurrentFrame] = useState(0)
@@ -338,8 +340,13 @@ export function FileViewDialogShared({
 
   // Memoize allFileComments to prevent CustomVideoPlayer re-renders
   const allFileComments = useMemo(
-    () => comments.filter(c => c.fileId === file.id && c.version === currentVersion),
-    [comments, file.id, currentVersion]
+    () => {
+      if (viewAllVersions) {
+        return comments.filter(c => c.fileId === file.id)
+      }
+      return comments.filter(c => c.fileId === file.id && c.version === currentVersion)
+    },
+    [comments, file.id, currentVersion, viewAllVersions]
   )
 
   // Helper to get file extension from URL or MIME type
@@ -1847,6 +1854,24 @@ export function FileViewDialogShared({
                     el.style.setProperty('--comment-width', `${commentWidth}px`)
                   }}
                 >
+                  <div className="p-3 border-b flex items-center justify-between bg-muted/10">
+                    <div className="text-sm font-medium">Bình luận</div>
+                    <Button
+                      id="comments-version-toggle"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setViewAllVersions(!viewAllVersions)}
+                      className={`h-7 px-2 text-xs gap-1.5 transition-all ${viewAllVersions
+                        ? 'bg-primary/10 text-primary border-primary/50 hover:bg-primary/20'
+                        : 'text-muted-foreground hover:text-foreground border-dashed hover:border-solid'
+                        }`}
+                      title={viewAllVersions ? 'Đang hiện tất cả bình luận' : 'Chỉ hiện bình luận phiên bản này'}
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>{viewAllVersions ? 'Tất cả bình luận' : 'Phiên bản hiện tại'}</span>
+                    </Button>
+                  </div>
+
                   <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0">
                     <CommentsList
                       comments={fileComments}
@@ -1862,11 +1887,13 @@ export function FileViewDialogShared({
                       onEdit={onEditComment}
                       onDelete={onDeleteComment}
                       isLocked={file.isCommentsLocked || project?.isCommentsLocked || isArchived}
+                      showVersionBadge={viewAllVersions}
                     />
                     {fileComments.length === 0 && (
                       <div className="text-center text-muted-foreground py-8">
                         Chưa có bình luận nào
                         {showOnlyCurrentTimeComments && <div className="text-xs mt-1">(Đang lọc theo thời gian hiện tại)</div>}
+                        {viewAllVersions && <div className="text-xs mt-1">(Đã bật xem tất cả phiên bản)</div>}
                       </div>
                     )}
                   </div>
@@ -1958,6 +1985,18 @@ export function FileViewDialogShared({
               <div
                 className="fixed top-0 right-0 left-[75vw] w-[25vw] h-screen flex flex-col bg-background border-l border-border z-50"
               >
+                <div className="p-3 border-b flex items-center justify-between bg-muted/10">
+                  <div className="text-sm font-medium">Bình luận</div>
+                  <Button
+                    variant={viewAllVersions ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewAllVersions(!viewAllVersions)}
+                    className={`h-7 px-2 text-xs gap-1.5 ${viewAllVersions ? 'bg-primary/10 text-primary border-primary/20' : 'text-muted-foreground'}`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Tất cả phiên bản</span>
+                  </Button>
+                </div>
                 <div className="flex-1 overflow-y-auto p-4">
                   <CommentsList
                     comments={fileComments}
@@ -1973,6 +2012,7 @@ export function FileViewDialogShared({
                     onEdit={onEditComment}
                     onDelete={onDeleteComment}
                     isLocked={file.isCommentsLocked || project?.isCommentsLocked || isArchived}
+                    showVersionBadge={viewAllVersions}
                   />
                   {fileComments.length === 0 && (
                     <div className="text-center text-muted-foreground py-8">

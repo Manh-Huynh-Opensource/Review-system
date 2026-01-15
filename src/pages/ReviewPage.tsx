@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { FileCardShared } from '@/components/shared/FileCardShared'
 import { FileViewDialogShared } from '@/components/shared/FileViewDialogShared'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
+import { NotificationSubscriptionDialog } from '@/components/shared/NotificationSubscriptionDialog'
 import { HelpCircle, Download, ShieldAlert, Loader2, Mail } from 'lucide-react'
 import { resetTourStatus } from '@/lib/fileTours'
 import {
@@ -43,6 +44,7 @@ export default function ReviewPage() {
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
   const [selectedFile, setSelectedFile] = useState<FileType | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false)
 
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
@@ -617,6 +619,12 @@ export default function ReviewPage() {
         </DialogContent>
       </Dialog>
 
+      <NotificationSubscriptionDialog
+        projectId={projectId!}
+        open={notificationDialogOpen}
+        onOpenChange={setNotificationDialogOpen}
+      />
+
       {/* Header */}
       <div className="border-b bg-card">
         <div className="container mx-auto px-4 py-6">
@@ -653,6 +661,17 @@ export default function ReviewPage() {
               >
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Tải tất cả</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setNotificationDialogOpen(true)}
+                className="gap-2 text-primary border-primary/20 hover:bg-primary/5"
+                title="Nhận thông báo qua email"
+              >
+                <Mail className="w-4 h-4" />
+                <span className="hidden sm:inline">Nhận thông báo</span>
               </Button>
 
               <Button

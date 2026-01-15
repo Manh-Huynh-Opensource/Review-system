@@ -9,11 +9,12 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowUpDown, Calendar, FileType, Download, Search, X, Share2, Check } from 'lucide-react'
+import { ArrowUpDown, Calendar, FileType, Download, Search, X, Share2, Check, Mail } from 'lucide-react'
 import type { Project } from '@/types'
 import { toast } from 'react-hot-toast'
 import { ProjectEditDialog } from '@/components/projects/ProjectEditDialog'
 import { ProjectShareDialog } from '@/components/dashboard/ProjectShareDialog'
+import { SubscribersListDialog } from '@/components/projects/SubscribersListDialog'
 
 type SortOption = 'name' | 'date' | 'type' | 'size'
 type SortDirection = 'asc' | 'desc'
@@ -29,6 +30,7 @@ export default function ProjectDetailPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [searchTerm, setSearchTerm] = useState('')
   const [copied, setCopied] = useState(false)
+  const [showSubscribers, setShowSubscribers] = useState(false)
 
   const handleCopyReviewLink = async () => {
     if (!projectId) return
@@ -94,6 +96,11 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="space-y-6">
+      <SubscribersListDialog
+        project={project}
+        open={showSubscribers}
+        onOpenChange={setShowSubscribers}
+      />
       {/* Header với Upload Button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -102,6 +109,21 @@ export default function ProjectDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowSubscribers(true)}
+            title="Danh sách đăng ký nhận thông báo"
+            className="gap-2"
+          >
+            <Mail className="h-4 w-4" />
+            <span className="hidden sm:inline">Người đăng ký</span>
+            {project.notificationEmails && project.notificationEmails.length > 0 && (
+              <span className="flex items-center justify-center bg-red-500 text-white text-[10px] h-4 px-1 rounded-full min-w-[16px]">
+                {project.notificationEmails.length}
+              </span>
+            )}
+          </Button>
+
           <ProjectEditDialog project={project} />
           <Button
             variant="outline"

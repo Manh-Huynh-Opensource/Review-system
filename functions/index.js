@@ -463,29 +463,41 @@ exports.onCommentCreated = functions.firestore
       console.log('✅ Created in-app notification for comment');
 
       // 2. Create email document (if notification emails exist)
-      // Priority: project notificationEmails → user defaultNotificationEmail → adminEmail
+      // Priority: project notificationEmails + adminEmail
       let recipientEmails = [];
 
-      // Check project-specific notification emails (array)
-      if (projectData.notificationEmails && projectData.notificationEmails.length > 0) {
-        recipientEmails = projectData.notificationEmails;
-      } else if (projectData.adminEmail) {
+      // 1. Project notification list (Subscribed guests)
+      if (Array.isArray(projectData.notificationEmails)) {
+        recipientEmails = [...projectData.notificationEmails];
+      }
+
+      // 2. Admin Email + User Settings
+      if (projectData.adminEmail) {
         // If project doesn't have specific emails, check user settings
         const userSettingsDoc = await admin.firestore().doc(`userSettings/${projectData.adminEmail}`).get();
+        let adminNotificationEmail = projectData.adminEmail;
+
         if (userSettingsDoc.exists) {
           const userSettings = userSettingsDoc.data();
-          recipientEmails = userSettings.defaultNotificationEmail
-            ? [userSettings.defaultNotificationEmail]
-            : [projectData.adminEmail];
-        } else {
-          recipientEmails = [projectData.adminEmail];
+          if (userSettings.defaultNotificationEmail) {
+            adminNotificationEmail = userSettings.defaultNotificationEmail;
+          }
+        }
+
+        // Add if not already present
+        if (!recipientEmails.includes(adminNotificationEmail)) {
+          recipientEmails.push(adminNotificationEmail);
         }
       }
 
       if (recipientEmails.length > 0) {
+        recipientEmails = [...new Set(recipientEmails)]; // Dedupe
+
         // Use origin from comment if available (for custom domains), otherwise fallback to firebase default
         const baseUrl = comment.origin || `https://${process.env.GCLOUD_PROJECT}.web.app`;
         const projectLink = `${baseUrl}/admin/projects/${projectId}`;
+        const clientLink = `${baseUrl}/review/${projectId}`; // Link for unsubscribing
+
         const mailRef = admin.firestore().collection('mail').doc();
         await mailRef.set({
           to: recipientEmails, // Array of email recipients
@@ -505,14 +517,15 @@ exports.onCommentCreated = functions.firestore
                 <a href="${projectLink}" style="background: #007bff; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
                   Xem chi tiết tại Dashboard
                 </a>
-                <p style="font-size: 12px; color: #777; margin-top: 20px;">
-                  Đây là thông báo tự động từ hệ thống Review System.
+                <p style="font-size: 12px; color: #777; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
+                  Bạn nhận được email này vì đã đăng ký nhận thông báo từ dự án.<br/>
+                  Để hủy đăng ký, vui lòng <a href="${clientLink}">truy cập dự án</a> và chọn hủy đăng ký.
                 </p>
               </div>
             `
           }
         });
-        console.log('✅ Created email document for comment notification');
+        console.log(`✅ Created email document for comment notification to ${recipientEmails.length} recipients`);
       }
 
       return null;
@@ -598,9 +611,230 @@ exports.onFileCreated = functions.firestore
       });
 
       console.log('✅ Created upload notification for new file');
+
+      // --- EMAIL NOTIFICATION LOGIC ---
+      let recipientEmails = [];
+      // 1. Project notification list (Subscribed guests) - Ensure it's an array
+      if (Array.isArray(projectData.notificationEmails)) {
+        recipientEmails = [...projectData.notificationEmails];
+      }
+
+      // 2. Admin Email + User Settings
+      if (projectData.adminEmail) {
+        // Check user settings for admin
+        const userSettingsDoc = await admin.firestore().doc(`userSettings/${projectData.adminEmail}`).get();
+        let adminNotificationEmail = projectData.adminEmail;
+        if (userSettingsDoc.exists) {
+          const userSettings = userSettingsDoc.data();
+          if (userSettings.defaultNotificationEmail) {
+            adminNotificationEmail = userSettings.defaultNotificationEmail;
+          }
+        }
+        // Add if not already present
+        if (!recipientEmails.includes(adminNotificationEmail)) {
+          recipientEmails.push(adminNotificationEmail);
+        }
+      }
+
+      if (recipientEmails.length > 0) {
+        // Deduplicate
+        recipientEmails = [...new Set(recipientEmails)];
+
+        const baseUrl = `https://${process.env.GCLOUD_PROJECT}.web.app`;
+        const projectLink = `${baseUrl}/review/${projectId}`; // Point to client review page
+        const unsubscribeLink = projectLink; // For now pointing to review page UI
+
+        const mailRef = admin.firestore().collection('mail').doc();
+        await mailRef.set({
+          to: recipientEmails,
+          message: {
+            subject: `[Review System] File mới: ${file.name} trong ${projectData.name}`,
+            html: `
+              <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
+                <h2>File mới được tải lên</h2>
+                <p><strong>Dự án:</strong> ${projectData.name}</p>
+                <p><strong>File:</strong> ${file.name}</p>
+                <br />
+                <a href="${projectLink}" style="background: #007bff; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  Xem file
+                </a>
+                <p style="font-size: 12px; color: #777; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
+                  Bạn nhận được email này vì đã đăng ký nhận thông báo từ dự án.<br/>
+                  Để hủy đăng ký, vui lòng <a href="${unsubscribeLink}">truy cập dự án</a> và chọn hủy đăng ký.
+                </p>
+              </div>
+            `
+          }
+        });
+        console.log(`✅ Sent email for new file to ${recipientEmails.length} recipients`);
+      }
+
       return null;
     } catch (error) {
       console.error('❌ Error creating upload notification:', error);
       return null;
     }
   });
+
+/**
+ * Trigger: File Updated (New Version)
+ * Creates notification when a file version is added
+ */
+exports.onFileUpdated = functions.firestore
+  .document('projects/{projectId}/files/{fileId}')
+  .onUpdate(async (change, context) => {
+    const newData = change.after.data();
+    const oldData = change.before.data();
+    const { projectId, fileId } = context.params;
+
+    // Check if versions array length increased
+    const oldVersions = oldData.versions || [];
+    const newVersions = newData.versions || [];
+
+    if (newVersions.length > oldVersions.length) {
+      // New version added
+      const latestVersion = newVersions[newVersions.length - 1];
+      console.log(`New version detected for file ${fileId}: v${latestVersion.version}`);
+
+      try {
+        const projectDoc = await admin.firestore().doc(`projects/${projectId}`).get();
+        if (!projectDoc.exists) return null;
+        const projectData = projectDoc.data();
+
+        // Send Email Notification
+        let recipientEmails = [];
+        if (Array.isArray(projectData.notificationEmails)) {
+          recipientEmails = [...projectData.notificationEmails];
+        }
+
+        if (projectData.adminEmail) {
+          const userSettingsDoc = await admin.firestore().doc(`userSettings/${projectData.adminEmail}`).get();
+          let adminNotificationEmail = projectData.adminEmail;
+          if (userSettingsDoc.exists) {
+            const userSettings = userSettingsDoc.data();
+            if (userSettings.defaultNotificationEmail) {
+              adminNotificationEmail = userSettings.defaultNotificationEmail;
+            }
+          }
+          if (!recipientEmails.includes(adminNotificationEmail)) {
+            recipientEmails.push(adminNotificationEmail);
+          }
+        }
+
+        if (recipientEmails.length > 0) {
+          recipientEmails = [...new Set(recipientEmails)];
+          const baseUrl = `https://${process.env.GCLOUD_PROJECT}.web.app`;
+          const projectLink = `${baseUrl}/review/${projectId}?fileId=${fileId}`;
+
+          const mailRef = admin.firestore().collection('mail').doc();
+          await mailRef.set({
+            to: recipientEmails,
+            message: {
+              subject: `[Review System] Version mới: ${newData.name} (v${latestVersion.version})`,
+              html: `
+                  <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
+                    <h2>Cập nhật phiên bản mới</h2>
+                    <p><strong>Dự án:</strong> ${projectData.name}</p>
+                    <p><strong>File:</strong> ${newData.name}</p>
+                    <p><strong>Phiên bản:</strong> v${latestVersion.version}</p>
+                    <br />
+                    <a href="${projectLink}" style="background: #007bff; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                      Xem thay đổi
+                    </a>
+                    <p style="font-size: 12px; color: #777; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
+                      Bạn nhận được email này vì đã đăng ký nhận thông báo từ dự án.<br/>
+                      Để hủy đăng ký, vui lòng <a href="${projectLink}">truy cập dự án</a> và chọn hủy đăng ký.
+                    </p>
+                  </div>
+                `
+            }
+          });
+          console.log(`✅ Sent email for new version to ${recipientEmails.length} recipients`);
+        }
+
+      } catch (error) {
+        console.error('❌ Error handling file update:', error);
+      }
+    }
+    return null;
+  });
+
+// --- SUBSCRIPTION MANAGEMENT API ---
+
+exports.subscribeToNotifications = functions.https.onCall(async (data, context) => {
+  const { projectId, email } = data;
+
+  if (!projectId || !email) {
+    throw new functions.https.HttpsError('invalid-argument', 'Missing project ID or email');
+  }
+
+  // Basic email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new functions.https.HttpsError('invalid-argument', 'Invalid email format');
+  }
+
+  // Add email to project's notificationEmails array
+  const projectRef = admin.firestore().collection('projects').doc(projectId);
+
+  try {
+    // Check if project exists
+    const doc = await projectRef.get();
+    if (!doc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Project not found');
+    }
+
+    await projectRef.update({
+      notificationEmails: admin.firestore.FieldValue.arrayUnion(email)
+    });
+
+    return { success: true, message: `Successfully subscribed ${email}` };
+  } catch (error) {
+    console.error('Subscription error:', error);
+    throw new functions.https.HttpsError('internal', 'Subscribe failed');
+  }
+});
+
+exports.unsubscribeFromNotifications = functions.https.onCall(async (data, context) => {
+  const { projectId, email } = data;
+
+  if (!projectId || !email) {
+    throw new functions.https.HttpsError('invalid-argument', 'Missing project ID or email');
+  }
+
+  const projectRef = admin.firestore().collection('projects').doc(projectId);
+
+  try {
+    await projectRef.update({
+      notificationEmails: admin.firestore.FieldValue.arrayRemove(email)
+    });
+    return { success: true, message: `Successfully unsubscribed ${email}` };
+  } catch (error) {
+    console.error('Unsubscribe error:', error);
+    throw new functions.https.HttpsError('internal', 'Unsubscribe failed');
+  }
+});
+
+exports.checkSubscription = functions.https.onCall(async (data, context) => {
+  const { projectId, email } = data;
+
+  if (!projectId || !email) {
+    throw new functions.https.HttpsError('invalid-argument', 'Missing info');
+  }
+
+  try {
+    const projectDoc = await admin.firestore().collection('projects').doc(projectId).get();
+    if (!projectDoc.exists) {
+      return { isSubscribed: false };
+    }
+
+    const projectData = projectDoc.data();
+    const emails = projectData.notificationEmails || [];
+    const isSubscribed = emails.includes(email);
+
+    return { isSubscribed };
+  } catch (error) {
+    console.error('Check subscription error:', error);
+    throw new functions.https.HttpsError('internal', 'Check failed');
+  }
+});

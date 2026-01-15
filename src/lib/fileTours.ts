@@ -44,6 +44,56 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
     }
   }
 
+  const versionToggleStep = {
+    element: '#comments-version-toggle',
+    popover: {
+      title: 'Lọc phiên bản bình luận',
+      description: 'Chuyển đổi giữa xem tất cả bình luận hoặc chỉ xem bình luận của phiên bản hiện tại.',
+      side: 'left',
+      align: 'start'
+    }
+  }
+
+  const compareStep = {
+    element: '#header-compare-btn',
+    popover: {
+      title: 'So sánh phiên bản',
+      description: 'So sánh trực quan giữa hai phiên bản ảnh khác nhau.',
+      side: 'bottom',
+      align: 'start'
+    }
+  }
+
+  const attachStep = {
+    element: '#comment-attach-button',
+    popover: {
+      title: 'Đính kèm File',
+      description: 'Đính kèm ảnh hoặc tài liệu vào bình luận của bạn.',
+      side: 'left',
+      align: 'start'
+    }
+  }
+
+  const linkStep = {
+    element: '#comment-link-button',
+    popover: {
+      title: 'Chèn liên kết',
+      description: 'Thêm đường dẫn (link) vào bình luận.',
+      side: 'left',
+      align: 'start'
+    }
+  }
+
+  const drawStep = {
+    element: '#comment-draw-button',
+    popover: {
+      title: 'Vẽ/Ghi chú',
+      description: 'Vẽ trực tiếp lên hình ảnh để minh họa ý kiến của bạn.',
+      side: 'left',
+      align: 'start'
+    }
+  }
+
   // Common header steps for desktop
   const headerSteps = [
     {
@@ -98,6 +148,15 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           }
         },
         {
+          element: '#mobile-comment-link-button',
+          popover: {
+            title: 'Chèn liên kết',
+            description: 'Thêm đường dẫn vào bình luận.',
+            side: 'top',
+            align: 'start'
+          }
+        },
+        {
           element: '#mobile-comment-draw-button',
           popover: {
             title: 'Vẽ ghi chú',
@@ -110,6 +169,7 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
     } else {
       steps = [
         ...headerSteps,
+        compareStep,
         {
           element: '#preview-container',
           popover: {
@@ -119,7 +179,11 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
             align: 'center'
           }
         },
-        commentStep
+        commentStep,
+        versionToggleStep,
+        attachStep,
+        linkStep,
+        drawStep
       ]
     }
   }
@@ -187,6 +251,15 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           popover: {
             title: 'Đính kèm',
             description: 'Đính kèm ảnh hoặc file.',
+            side: 'top',
+            align: 'start'
+          }
+        },
+        {
+          element: '#mobile-comment-link-button',
+          popover: {
+            title: 'Chèn liên kết',
+            description: 'Thêm đường dẫn vào bình luận.',
             side: 'top',
             align: 'start'
           }
@@ -277,24 +350,10 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           }
         },
         commentStep,
-        {
-          element: '#comment-attach-button',
-          popover: {
-            title: 'Đính kèm File',
-            description: 'Sử dụng để đính kèm ảnh hoặc file vào bình luận.',
-            side: 'left',
-            align: 'start'
-          }
-        },
-        {
-          element: '#comment-draw-button',
-          popover: {
-            title: 'Vẽ/Ghi chú',
-            description: 'Bật công cụ vẽ để thêm ghi chú trực tiếp lên khung xem trước.',
-            side: 'left',
-            align: 'start'
-          }
-        }
+        versionToggleStep,
+        attachStep,
+        linkStep,
+        drawStep
       ]
     }
   }
@@ -335,6 +394,15 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           popover: {
             title: 'Đính kèm',
             description: 'Đính kèm file vào bình luận.',
+            side: 'top',
+            align: 'start'
+          }
+        },
+        {
+          element: '#mobile-comment-link-button',
+          popover: {
+            title: 'Chèn liên kết',
+            description: 'Thêm đường dẫn vào bình luận.',
             side: 'top',
             align: 'start'
           }
@@ -389,24 +457,10 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           }
         },
         commentStep,
-        {
-          element: '#comment-attach-button',
-          popover: {
-            title: 'Đính kèm File',
-            description: 'Đính kèm ảnh hoặc file vào bình luận.',
-            side: 'left',
-            align: 'start'
-          }
-        },
-        {
-          element: '#comment-draw-button',
-          popover: {
-            title: 'Vẽ/Ghi chú',
-            description: 'Mở công cụ vẽ để thêm ghi chú cho frame.',
-            side: 'left',
-            align: 'start'
-          }
-        }
+        versionToggleStep,
+        attachStep,
+        linkStep,
+        drawStep
       ]
     }
   }
@@ -443,6 +497,15 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           }
         },
         {
+          element: '#mobile-comment-link-button',
+          popover: {
+            title: 'Chèn liên kết',
+            description: 'Thêm đường dẫn vào bình luận.',
+            side: 'top',
+            align: 'start'
+          }
+        },
+        {
           element: '#mobile-comment-draw-button',
           popover: {
             title: 'Vẽ ghi chú',
@@ -474,24 +537,10 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           }
         },
         commentStep,
-        {
-          element: '#comment-attach-button',
-          popover: {
-            title: 'Đính kèm File',
-            description: 'Đính kèm tài liệu hoặc ảnh vào bình luận.',
-            side: 'left',
-            align: 'start'
-          }
-        },
-        {
-          element: '#comment-draw-button',
-          popover: {
-            title: 'Vẽ/Ghi chú',
-            description: 'Thêm ghi chú trực tiếp lên trang PDF (nếu có công cụ).',
-            side: 'left',
-            align: 'start'
-          }
-        }
+        versionToggleStep,
+        attachStep,
+        linkStep,
+        drawStep
       ]
     }
   }
@@ -561,6 +610,33 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
             description: 'Nhập bình luận cho mô hình.',
             side: 'top',
             align: 'center'
+          }
+        },
+        {
+          element: '#mobile-comment-attach-button',
+          popover: {
+            title: 'Đính kèm',
+            description: 'Đính kèm ảnh hoặc file.',
+            side: 'top',
+            align: 'start'
+          }
+        },
+        {
+          element: '#mobile-comment-link-button',
+          popover: {
+            title: 'Chèn liên kết',
+            description: 'Thêm đường dẫn vào bình luận.',
+            side: 'top',
+            align: 'start'
+          }
+        },
+        {
+          element: '#mobile-comment-draw-button',
+          popover: {
+            title: 'Vẽ ghi chú',
+            description: 'Vẽ ghi chú trên mô hình.',
+            side: 'top',
+            align: 'start'
           }
         }
       ]
@@ -658,24 +734,10 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           }
         },
         commentStep,
-        {
-          element: '#comment-attach-button',
-          popover: {
-            title: 'Đính kèm File',
-            description: 'Đính kèm ảnh hoặc file liên quan tới mô hình.',
-            side: 'left',
-            align: 'start'
-          }
-        },
-        {
-          element: '#comment-draw-button',
-          popover: {
-            title: 'Vẽ/Ghi chú',
-            description: 'Thêm ghi chú để giải thích các phần của mô hình.',
-            side: 'left',
-            align: 'start'
-          }
-        }
+        versionToggleStep,
+        attachStep,
+        linkStep,
+        drawStep
       ]
     }
   }
@@ -701,7 +763,11 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           align: 'center'
         }
       },
-      commentStep
+      commentStep,
+      versionToggleStep,
+      attachStep,
+      linkStep,
+      drawStep
     ]
   }
 
