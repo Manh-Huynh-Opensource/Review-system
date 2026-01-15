@@ -137,8 +137,8 @@ exports.validateFileUpload = functions.storage.object().onFinalize(async (object
     }
 
     // --- Real Virus Scan with VirusTotal ---
-    // Support both .env (modern) and functions.config() (legacy/CLI)
-    const vtApiKey = process.env.VIRUSTOTAL_API_KEY || (functions.config().virustotal && functions.config().virustotal.key);
+    // Support for .env (modern)
+    const vtApiKey = process.env.VIRUSTOTAL_API_KEY;
 
     if (!vtApiKey) {
       console.warn('⚠️ VIRUSTOTAL_API_KEY missing. Skipping real scan.');
