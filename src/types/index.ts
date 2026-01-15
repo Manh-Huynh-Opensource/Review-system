@@ -28,6 +28,7 @@ export interface Project {
   updatedAt?: Timestamp
   status: ProjectStatus
   adminEmail: string
+  notificationEmails?: string[] // Emails to receive notifications (uses default if not set)
   // Archive fields
   archiveUrl?: string // External long-term storage link
   archivedAt?: Timestamp // When project was archived

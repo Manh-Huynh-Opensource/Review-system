@@ -6,6 +6,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // User Settings collection (keyed by email)
+    match /userSettings/{email} {
+      // Users can only read/write their own settings
+      allow read, write: if isAuthenticated() && request.auth.token.email == email;
+    }
+
     // Projects collection
     match /projects/{projectId} {
       function isProjectActive() {

@@ -462,12 +462,31 @@ exports.onCommentCreated = functions.firestore
       await admin.firestore().collection('notifications').add(notificationData);
       console.log('✅ Created in-app notification for comment');
 
-      // 2. Create email document (if adminEmail exists)
-      if (projectData.adminEmail) {
+      // 2. Create email document (if notification emails exist)
+      // Priority: project notificationEmails → user defaultNotificationEmail → adminEmail
+      let recipientEmails = [];
+
+      // Check project-specific notification emails (array)
+      if (projectData.notificationEmails && projectData.notificationEmails.length > 0) {
+        recipientEmails = projectData.notificationEmails;
+      } else if (projectData.adminEmail) {
+        // If project doesn't have specific emails, check user settings
+        const userSettingsDoc = await admin.firestore().doc(`userSettings/${projectData.adminEmail}`).get();
+        if (userSettingsDoc.exists) {
+          const userSettings = userSettingsDoc.data();
+          recipientEmails = userSettings.defaultNotificationEmail
+            ? [userSettings.defaultNotificationEmail]
+            : [projectData.adminEmail];
+        } else {
+          recipientEmails = [projectData.adminEmail];
+        }
+      }
+
+      if (recipientEmails.length > 0) {
         const projectLink = `https://review-system-b8883.web.app/admin/projects/${projectId}`;
         const mailRef = admin.firestore().collection('mail').doc();
         await mailRef.set({
-          to: projectData.adminEmail,
+          to: recipientEmails, // Array of email recipients
           message: {
             subject: `[Review System] Bình luận mới: ${comment.userName || 'Anonymous'} trong ${projectData.name}`,
             html: `

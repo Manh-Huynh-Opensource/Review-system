@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'
+import { AccountSettingsDialog } from '@/components/auth/AccountSettingsDialog'
 import {
   Dialog,
   DialogContent,
@@ -170,7 +171,8 @@ export function AdminLayout() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <div className="p-2">
+                <div className="p-2 space-y-1">
+                  <AccountSettingsDialog />
                   <ChangePasswordDialog />
                 </div>
                 <DropdownMenuSeparator />
@@ -228,7 +230,8 @@ export function AdminLayout() {
                 <p className="text-sm font-medium truncate">{user?.email}</p>
               </div>
 
-              <div className="px-1">
+              <div className="px-1 space-y-1">
+                <AccountSettingsDialog />
                 <ChangePasswordDialog />
               </div>
 

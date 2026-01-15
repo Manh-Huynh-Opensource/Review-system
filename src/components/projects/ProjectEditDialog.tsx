@@ -22,7 +22,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Pencil, X, UserPlus, Link2 } from 'lucide-react'
+import { Pencil, X, UserPlus, Link2, Mail } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { ClientDialog } from '@/components/clients/ClientDialog'
 
@@ -42,6 +42,7 @@ export function ProjectEditDialog({ project, triggerAsMenuItem = false }: Props)
   )
   const [tags, setTags] = useState(project.tags?.join(', ') || '')
   const [archiveUrl, setArchiveUrl] = useState(project.archiveUrl || '')
+  const [notificationEmails, setNotificationEmails] = useState(project.notificationEmails?.join(', ') || '')
 
   const { updateProject, loading } = useProjectStore()
   const { clients, subscribeToClients } = useClientStore()
@@ -68,7 +69,10 @@ export function ProjectEditDialog({ project, triggerAsMenuItem = false }: Props)
         clientEmail: selectedClient?.email || undefined,
         deadline: deadline ? Timestamp.fromDate(new Date(deadline)) : undefined,
         tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-        archiveUrl: archiveUrl.trim() || undefined
+        archiveUrl: archiveUrl.trim() || undefined,
+        notificationEmails: notificationEmails.trim()
+          ? notificationEmails.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+          : undefined
       }
 
       await updateProject(project.id, updateData)
@@ -175,6 +179,24 @@ export function ProjectEditDialog({ project, triggerAsMenuItem = false }: Props)
                 onChange={(e) => setTags(e.target.value)}
                 placeholder="animation, 3d, urgent (phân tách bằng dấu phẩy)"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notificationEmail">Email nhận thông báo <span className="text-xs text-muted-foreground">(Tùy chọn - mặc định dùng email đăng nhập)</span></Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="notificationEmail"
+                  type="text"
+                  value={notificationEmails}
+                  onChange={(e) => setNotificationEmails(e.target.value)}
+                  placeholder="email1@example.com, email2@example.com"
+                  className="pl-9"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Nhập nhiều email cách nhau bằng dấu phẩy. Để trống = dùng email mặc định trong cài đặt tài khoản.
+              </p>
             </div>
 
             <div className="space-y-2">
