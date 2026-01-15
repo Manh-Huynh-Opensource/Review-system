@@ -580,7 +580,7 @@ export default function ReviewPage() {
     )
   }
 
-  const projectFiles = files.filter(f => f.projectId === projectId)
+  const projectFiles = files.filter(f => f.projectId === projectId && !f.isTrashed)
 
   const isArchived = project.status === 'archived'
 

@@ -570,8 +570,8 @@ export const useFileStore = create<FileState>((set, get) => ({
       )
       await Promise.all(deleteCommentPromises)
 
-
-
+      // Delete the file document from Firestore
+      await deleteDoc(doc(db, 'projects', projectId, 'files', fileId))
 
       toast.success(`Đã xóa vĩnh viễn "${file.name}"`)
     } catch (error: any) {
@@ -921,62 +921,74 @@ export const useFileStore = create<FileState>((set, get) => ({
       for (const file of projectFiles) {
         console.log(`📄 Cleaning up file ${file.name} (${file.id})`)
 
+        const updatedVersions = []
+
         for (const version of file.versions) {
-          const isLatest = version.version === file.currentVersion
-          const hasThumbnail = !!(version.thumbnailUrl || version.shareThumbnailUrl)
+
+          // Determine best available thumbnail to preserve
+          let preservedUrl = version.thumbnailUrl || version.shareThumbnailUrl || ''
+          let preservedSequenceUrls: string[] = []
 
           try {
-            // 1. Delete original file data
-            // Only delete the latest version's original file if we have a thumbnail to show instead
-            const shouldDeleteOriginal = !isLatest || hasThumbnail
+            // STRATEGY: Delete heavy assets, keep lightweight thumbnails
 
-            if (shouldDeleteOriginal) {
-              if (file.type === 'sequence' && version.sequenceUrls) {
-                for (const url of version.sequenceUrls) {
-                  try { await deleteObject(ref(storage, url)) } catch (e) { /* skip */ }
-                }
-              } else if (version.url) {
-                // Check if the URL is actually a thumbnail before deleting (though usually it's the original)
-                const isUrlDifferentFromThumb = version.url !== version.thumbnailUrl && version.url !== version.shareThumbnailUrl
-                if (isUrlDifferentFromThumb) {
-                  try {
-                    const fileRef = ref(storage, version.url)
-                    await deleteObject(fileRef)
-                  } catch (e) { /* skip */ }
-                }
-              }
-            }
+            if (file.type === 'sequence' && version.sequenceUrls && version.sequenceUrls.length > 0) {
+              // 1. SEQUENCE: Keep frame 0, delete the rest
+              const firstFrame = version.sequenceUrls[0]
+              const framesToDelete = version.sequenceUrls.slice(1)
 
-            // 2. Handle Thumbnails for non-latest
-            if (!isLatest) {
-              if (version.thumbnailUrl) {
-                try { await deleteObject(ref(storage, version.thumbnailUrl)) } catch (e) { /* skip */ }
+              // Delete frames 1..N
+              for (const url of framesToDelete) {
+                try { await deleteObject(ref(storage, url)) } catch (e) { /* silent fail */ }
               }
-              if (version.shareThumbnailUrl) {
-                try { await deleteObject(ref(storage, version.shareThumbnailUrl)) } catch (e) { /* skip */ }
+
+              // Set preserved state
+              if (!preservedUrl) preservedUrl = firstFrame // Use frame 0 as thumb if needed
+              preservedSequenceUrls = [firstFrame] // Keep strict reference to frame 0
+
+              console.log(`🎬 Sequence cleaned: Kept frame 0, deleted ${framesToDelete.length} frames`)
+
+            } else if (file.type === 'image') {
+              // 2. IMAGE: If we have a share/generated thumbnail, use it and delete original
+              // If we ONLY have the original, we MUST keep it (or user sees nothing)
+              const hasSeparateThumbnail = !!(version.thumbnailUrl || version.shareThumbnailUrl)
+
+              if (hasSeparateThumbnail && version.url) {
+                // Delete original high-res image
+                try { await deleteObject(ref(storage, version.url)) } catch (e) { /* silent fail */ }
+                console.log(`🖼️ Image optimized: Deleted original, using thumbnail`)
+              } else {
+                // Keep original as it's the only visual
+                preservedUrl = version.url
+                console.log(`🖼️ Image kept: No separate thumbnail available`)
               }
+
             } else {
-              console.log(`✨ Preserving Visuals for latest version v${version.version}`)
+              // 3. VIDEO / MODEL / PDF: Always delete original if it exists
+              if (version.url) {
+                // Don't delete if the URL is actually one of the thumbnails (rare edge case in data)
+                if (version.url !== version.thumbnailUrl && version.url !== version.shareThumbnailUrl) {
+                  try { await deleteObject(ref(storage, version.url)) } catch (e) { /* silent fail */ }
+                  console.log(`📦 Heavy file deleted: ${file.type}`)
+                }
+              }
             }
+
           } catch (err) {
             console.warn(`⚠️ Error during cleanup of version ${version.version}:`, err)
           }
+
+          // Push updated version metadata
+          updatedVersions.push({
+            ...version,
+            url: preservedUrl,
+            sequenceUrls: preservedSequenceUrls,
+            validationStatus: 'clean' // Mark as archived/cleaned
+          })
         }
 
-        // 3. Update file document to reflect it's cleared but preserve metadata for UI
+        // 3. Update file document to reflect it's cleared
         const fileRef = doc(db, 'projects', projectId, 'files', file.id)
-
-        const updatedVersions = file.versions.map(v => {
-          const isLatest = v.version === file.currentVersion
-          const bestThumb = v.thumbnailUrl || v.shareThumbnailUrl || (isLatest ? v.url : '')
-
-          return {
-            ...v,
-            url: bestThumb, // Point URL to the preserved thumbnail
-            sequenceUrls: isLatest && !bestThumb && v.sequenceUrls ? [v.sequenceUrls[0]] : [], // Keep 1st frame if nothing else
-            validationStatus: 'clean'
-          }
-        })
 
         await updateDoc(fileRef, {
           versions: updatedVersions,

@@ -240,11 +240,11 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
   const filteredAndSortedFiles = useMemo(() => {
     if (!files) return []
 
-    // First filter by search term
-    let filtered = files
+    // Filter by project and exclude trashed files
+    let filtered = files.filter(f => f.projectId === projectId && !f.isTrashed)
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim()
-      filtered = files.filter(file => {
+      filtered = filtered.filter(file => {
         const matchesName = file.name.toLowerCase().includes(term)
         const matchesType = getFileTypeLabel(file.type).toLowerCase().includes(term)
         const currentVersion = file.versions.find(v => v.version === file.currentVersion) || file.versions[0]
