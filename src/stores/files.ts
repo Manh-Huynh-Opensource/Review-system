@@ -553,10 +553,9 @@ export const useFileStore = create<FileState>((set, get) => ({
           if (file.type === 'sequence' && version.sequenceUrls) {
             // Delete all frames in sequence
             for (let i = 0; i < version.sequenceUrls.length; i++) {
-              const framePath = `projects/${projectId}/${fileId}/v${version.version}/frames/${String(i).padStart(4, '0')}_*`
 
             }
-            const versionFolderPath = `projects/${projectId}/${fileId}/v${version.version}/`
+
 
           } else {
             // Single file deletion
