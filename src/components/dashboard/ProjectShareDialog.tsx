@@ -99,7 +99,7 @@ export function ProjectShareDialog({
     const { projects, updateProject } = useProjectStore()
     const project = projects.find(p => p.id === projectId)
 
-    const currentAccess = project?.accessLevel || 'token_required' // Default to restricted if unknown
+    const currentAccess = project?.accessLevel || 'public' // Default to public if unknown (legacy behavior matches ReviewPage)
 
     const handleAccessChange = async (newLevel: 'public' | 'token_required') => {
         if (!projectId) return

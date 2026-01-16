@@ -39,6 +39,13 @@ export default function ReviewPage() {
   const [currentUserName, setCurrentUserName] = useState(() => {
     return localStorage.getItem('reviewUserName') || ''
   })
+  const [selectedAvatar, setSelectedAvatar] = useState(() => {
+    return localStorage.getItem('reviewUserAvatar') || '/avatar/Connection.svg'
+  })
+  const [selectedColor, setSelectedColor] = useState(() => {
+    return localStorage.getItem('reviewUserColor') || '#A855F7'
+  })
+
   const [loading, setLoading] = useState(true)
   const [showNamePrompt, setShowNamePrompt] = useState(false)
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
@@ -337,6 +344,9 @@ export default function ReviewPage() {
     const name = input.value.trim()
     if (name) {
       handleUserNameChange(name)
+      // Save avatar settings
+      localStorage.setItem('reviewUserAvatar', selectedAvatar)
+      localStorage.setItem('reviewUserColor', selectedColor)
       setShowNamePrompt(false)
     }
   }
@@ -354,7 +364,7 @@ export default function ReviewPage() {
 
   const handleAddComment = async (userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[]) => {
     if (selectedFile) {
-      await addComment(projectId!, selectedFile.id, selectedFile.currentVersion, userName, content, timestamp, parentCommentId, annotationData, attachments)
+      await addComment(projectId!, selectedFile.id, selectedFile.currentVersion, userName, content, timestamp, parentCommentId, annotationData, attachments, selectedAvatar, selectedColor)
     }
   }
 
@@ -365,6 +375,7 @@ export default function ReviewPage() {
   const handleDeleteComment = async (commentId: string) => {
     await deleteComment(projectId!, commentId)
   }
+
 
   // Handle version switching locally (no Firestore update needed for public preview)
   const handleSwitchVersion = (_fileId: string, version: number) => {
@@ -595,23 +606,92 @@ export default function ReviewPage() {
         fileName={currentDownloadFile}
       />
 
-      {/* UserName Prompt Dialog */}
       <Dialog open={showNamePrompt} onOpenChange={setShowNamePrompt}>
         <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Chào mừng đến với Review</DialogTitle>
             <DialogDescription>
-              Vui lòng nhập tên của bạn để tiếp tục xem và bình luận
+              Vui lòng nhập tên và chọn avatar để tiếp tục xem và bình luận
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleNameSubmit} className="space-y-4">
-            <Input
-              name="userName"
-              placeholder="Nhập tên của bạn..."
-              required
-              autoFocus
-              className="w-full"
-            />
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Tên hiển thị</label>
+              <Input
+                name="userName"
+                placeholder="Nhập tên của bạn..."
+                required
+                autoFocus
+                className="w-full"
+                defaultValue={currentUserName}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Chọn Avatar</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  '/avatar/Connection.svg',
+                  '/avatar/Momentum.svg',
+                  '/avatar/Radiance.svg',
+                  '/avatar/structure.svg'
+                ].map((src) => (
+                  <button
+                    key={src}
+                    type="button"
+                    onClick={() => setSelectedAvatar(src)}
+                    className={`relative rounded-full overflow-hidden aspect-square border-2 transition-all ${selectedAvatar === src ? 'border-primary ring-2 ring-primary/30' : 'border-transparent hover:border-muted-foreground/30'
+                      }`}
+                  >
+                    <div
+                      className="w-full h-full flex items-center justify-center p-2"
+                    >
+                      <div
+                        className="w-full h-full transition-colors duration-200"
+                        style={{
+                          backgroundColor: selectedColor,
+                          maskImage: `url(${src})`,
+                          WebkitMaskImage: `url(${src})`,
+                          maskSize: 'contain',
+                          WebkitMaskSize: 'contain',
+                          maskRepeat: 'no-repeat',
+                          WebkitMaskRepeat: 'no-repeat',
+                          maskPosition: 'center',
+                          WebkitMaskPosition: 'center'
+                        }}
+                      />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Màu nền Avatar</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  '#EF4444', // Red
+                  '#F97316', // Orange
+                  '#EAB308', // Yellow
+                  '#22C55E', // Green
+                  '#3B82F6', // Blue
+                  '#06B6D4', // Cyan
+                  '#A855F7', // Purple
+                  '#64748B', // Grey
+                ].map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setSelectedColor(color)}
+                    className={`w-8 h-8 rounded-full border transition-all ${selectedColor === color ? 'border-primary ring-2 ring-primary/30 scale-110' : 'border-transparent hover:scale-105'
+                      }`}
+                    style={{ backgroundColor: color }}
+                    aria-label={`Select color ${color}`}
+                  />
+                ))}
+              </div>
+            </div>
+
             <Button type="submit" className="w-full">
               Tiếp tục
             </Button>
@@ -778,6 +858,18 @@ export default function ReviewPage() {
           </>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="border-t bg-muted/30 mt-auto py-8">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            Review System © {new Date().getFullYear()}. All rights reserved.
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Developed by <a href="https://manhhuynh.work" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Manh Huynh</a>
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }

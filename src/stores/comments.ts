@@ -23,7 +23,7 @@ interface CommentState {
   unsubscribeMap: Map<string, Unsubscribe>
 
   subscribeToComments: (projectId: string, fileId?: string) => void
-  addComment: (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[]) => Promise<void>
+  addComment: (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[], avatarUrl?: string, avatarColor?: string) => Promise<void>
   toggleResolve: (projectId: string, commentId: string, isResolved: boolean) => Promise<void>
   togglePin: (projectId: string, commentId: string, currentStatus: boolean) => Promise<void>
   editComment: (projectId: string, commentId: string, newContent: string) => Promise<void>
@@ -94,7 +94,7 @@ export const useCommentStore = create<CommentState>((set, get) => ({
     set({ unsubscribeMap, unsubscribe })
   },
 
-  addComment: async (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[]) => {
+  addComment: async (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[], avatarUrl?: string, avatarColor?: string) => {
     set({ loading: true })
 
     // Generate temporary ID for optimistic update
@@ -116,7 +116,9 @@ export const useCommentStore = create<CommentState>((set, get) => ({
       createdAt: { toDate: () => new Date(), toMillis: () => Date.now() } as any,
       attachments: undefined,
       imageUrls: undefined,
-      isPending: true // Mark as pending
+      isPending: true, // Mark as pending
+      avatarUrl,
+      avatarColor
     }
 
     // Add optimistic comment to state immediately
@@ -139,7 +141,9 @@ export const useCommentStore = create<CommentState>((set, get) => ({
         createdAt: Timestamp.now(),
         origin: window.location.origin, // Capture current domain (e.g., https://view.manhhuynh.work)
         attachments: null,
-        imageUrls: null
+        imageUrls: null,
+        avatarUrl: avatarUrl || null,
+        avatarColor: avatarColor || null
       })
 
       // Upload attachments if any

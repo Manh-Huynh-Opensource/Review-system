@@ -143,6 +143,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         tags: [],
         createdAt: now,
         updatedAt: now,
+        accessLevel: 'token_required',
         ...cleanData,
       })
       toast.success('Tạo dự án thành công')

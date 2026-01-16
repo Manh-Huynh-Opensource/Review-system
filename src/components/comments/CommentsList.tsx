@@ -211,6 +211,29 @@ export function CommentsList({
           <div className="flex items-start justify-between gap-2 mb-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
+                {/* Avatar */}
+                {comment.avatarUrl ? (
+                  <div className="w-6 h-6 rounded-full bg-muted/50 border border-border flex items-center justify-center shrink-0">
+                    <div
+                      className="w-4 h-4"
+                      style={{
+                        backgroundColor: comment.avatarColor || '#000',
+                        maskImage: `url(${comment.avatarUrl})`,
+                        WebkitMaskImage: `url(${comment.avatarUrl})`,
+                        maskSize: 'contain',
+                        WebkitMaskSize: 'contain',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskPosition: 'center',
+                        WebkitMaskPosition: 'center'
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 text-muted-foreground">
+                    <span className="text-[10px] font-bold">{comment.userName.charAt(0).toUpperCase()}</span>
+                  </div>
+                )}
                 <span className="font-medium text-sm">{comment.userName}</span>
                 {showVersionBadge && (
                   <Badge variant="outline" className="text-[10px] h-4 px-1 bg-muted/50 border-muted-foreground/30 text-muted-foreground">
