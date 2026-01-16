@@ -598,7 +598,7 @@ export default function ReviewPage() {
   const isArchived = project.status === 'archived'
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <DownloadProgressDialog
         open={isDownloading}
         progress={downloadProgress}
