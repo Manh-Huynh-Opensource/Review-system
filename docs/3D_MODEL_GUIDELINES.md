@@ -131,3 +131,24 @@ Trong cửa sổ Export glTF 2.0, mở tab **Animation**:
 *   **Apply Scale:** Bắt buộc phải Apply Scale cho cả Mesh và Armature (khung xương) trước khi làm animation, nếu không chuyển động sẽ bị méo khi lên web.
 *   **Bake Animation:** Nếu dùng IK (Inverse Kinematics) hoặc Bone Constraint phức tạp, hãy chọn **"Sample Animations"** (hoặc Bake Action) khi export để Blender nướng chuyển động thành Keyframe đơn giản mà Three.js hiểu được.
 
+
+## 7. Giới hạn tối ưu cho AR (Thực tế ảo tăng cường)
+
+Để đảm bảo tính năng AR hoạt động mượt mà và **không bị crash** trên thiết bị di động (đặc biệt là iOS), file GLB cần tuân thủ các giới hạn sau:
+
+| Thông số | Tối ưu (Mượt nhất) | Chấp nhận được | Nguy hiểm (Dễ Crash) |
+| :--- | :--- | :--- | :--- |
+| **Dung lượng File** | **< 10 MB** | 10 - 20 MB | > 30 MB (IOS dễ crash) |
+| **Số lượng Tam giác (Triangles)** | **< 100k** | 100k - 200k | > 300k |
+| **Kích thước Texture** | **1024x1024** | 2048x2048 | 4096 (4K) |
+| **Số lượng Draw Calls (Materials)** | **< 5** | 5 - 10 | > 15 |
+
+### Tại sao lại có giới hạn này?
+*   **iOS Quick Look:** Có quy định chặt chẽ về bộ nhớ. Nếu file quá nặng, hệ điều hành sẽ tự động tắt ứng dụng để bảo vệ RAM.
+*   **Mạng di động (4G/5G):** File > 20MB sẽ load rất lâu khi không có Wifi, làm người dùng nản và thoát ra.
+
+### Mẹo giảm dung lượng:
+1.  **Dùng Draco Compression:** Luôn nén mesh (như hướng dẫn ở mục 4.5).
+2.  **Giảm Texture:** Không cần texture 4K cho màn hình điện thoại bé xíu. Hãy resize về 1K hoặc 2K.
+3.  **Hợp nhất Mesh:** Join các chi tiết nhỏ thành một khối lớn để giảm Draw Calls.
+

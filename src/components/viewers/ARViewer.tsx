@@ -19,16 +19,15 @@ interface ARViewerProps {
 export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(({ url, iosSrc, alt = "3D Model" }, ref) => {
     const modelViewerRef = useRef<HTMLElement>(null)
     const [arUrl, setArUrl] = useState<string | undefined>(undefined)
+    const [error, setError] = useState<string | null>(null)
 
     useImperativeHandle(ref, () => ({
         activateAR: () => {
-            // 1. Set the URL to trigger loading
+            setError(null) // Reset error
             setArUrl(url)
-
-            // 2. Wait for a tick to allow the element to update, then activate
             setTimeout(() => {
                 if (modelViewerRef.current) {
-                    // @ts-ignore - activateAR is a method on the custom element
+                    // @ts-ignore
                     modelViewerRef.current.activateAR()
                 }
             }, 100)
@@ -41,29 +40,55 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(({ url, iosSrc, a
     }, [])
 
     return (
-        <div className="absolute top-0 left-0 w-0 h-0 overflow-hidden pointer-events-none opacity-0" aria-hidden="true">
-            {/* 
-        @ts-ignore - custom element type definition 
-        Style with display: block but 0 dimensions/opacity to ensure it's "rendered" for activation but invisible
-      */}
-            {/* @ts-ignore */}
-            <model-viewer
-                ref={modelViewerRef}
-                src={arUrl}
-                ios-src={iosSrc}
-                alt={alt}
-                ar
-                ar-modes="scene-viewer webxr quick-look"
-                camera-controls
-                ar-scale="auto"
-                shadow-intensity="0" // Disable shadows to save memory
-                environment-image="neutral" // Use basic lighting to save memory
-                loading="eager" // Load immediately once src is set (which is only on click now)
-                style={{ width: '1px', height: '1px' }}
-            >
+        <>
+            <div className="absolute top-0 left-0 w-0 h-0 overflow-hidden pointer-events-none opacity-0" aria-hidden="true">
                 {/* @ts-ignore */}
-            </model-viewer>
-        </div>
+                <model-viewer
+                    ref={(el: HTMLElement | null) => {
+                        // @ts-ignore
+                        modelViewerRef.current = el;
+                        if (el) {
+                            el.addEventListener('error', (e: any) => {
+                                const msg = e.detail?.message || JSON.stringify(e.detail) || "Unknown AR Error";
+                                console.error('AR Viewer Error:', msg);
+                                setError(msg);
+                            });
+                        }
+                    }}
+                    src={arUrl}
+                    ios-src={iosSrc}
+                    alt={alt}
+                    ar
+                    ar-modes="scene-viewer webxr quick-look"
+                    ar-scale="auto"
+                    ar-placement="floor"
+                    camera-controls
+                    shadow-intensity="0"
+                    environment-image="neutral"
+                    loading="eager"
+                    style={{ width: '1px', height: '1px' }}
+                >
+                </model-viewer>
+            </div>
+
+            {/* Mobile Debug Error Overlay */}
+            {error && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-xl max-w-sm w-full text-center space-y-4">
+                        <div className="text-red-500 font-bold text-lg">Lỗi AR</div>
+                        <p className="text-sm text-zinc-600 dark:text-zinc-300 break-words font-mono bg-zinc-100 dark:bg-zinc-800 p-2 rounded">
+                            {error}
+                        </p>
+                        <button
+                            onClick={() => setError(null)}
+                            className="w-full py-2 bg-primary text-white rounded-md font-medium"
+                        >
+                            Đóng
+                        </button>
+                    </div>
+                </div>
+            )}
+        </>
     )
 })
 

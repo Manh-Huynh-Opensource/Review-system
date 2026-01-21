@@ -39,6 +39,8 @@ const ALLOWED_TYPES = {
   'application/pdf': '.pdf'
 }
 
+
+
 export function FileUploader({ projectId, existingFileId, onUploadComplete, initialFiles }: FileUploaderProps) {
   const { uploadFile, uploadProgress } = useFileStore()
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -95,12 +97,16 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
     }
   }, []) // Run once on mount
 
+  // Auto-process initial files
+  useEffect(() => {
+    if (initialFiles && initialFiles.length > 0 && uploadQueue.length > 0 && !isUploading && currentUploadIndex === -1) {
+      processFiles(initialFiles)
+    }
+  }, []) // Run once on mount
+
   const processFiles = async (files: File[]) => {
     if (files.length === 0) return
-
     setError(null)
-
-    // Validate all files first
     const validFiles: FileUploadStatus[] = []
     const errors: string[] = []
 
@@ -132,16 +138,18 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
     // Upload files sequentially
     for (let i = 0; i < validFiles.length; i++) {
       setCurrentUploadIndex(i)
-      const item = validFiles[i]
-
-      // Update status to uploading
-      setUploadQueue(prev => prev.map((f, idx) =>
-        idx === i ? { ...f, status: 'uploading' } : f
-      ))
+      let item = validFiles[i]
 
       try {
-        console.log(`🎯 Uploading file ${i + 1}/${validFiles.length}: ${item.file.name}`)
-        await uploadFile(projectId, item.file, existingFileId)
+        let fileToUpload = item.file
+
+        // Update status to uploading (network)
+        setUploadQueue(prev => prev.map((f, idx) =>
+          idx === i ? { ...f, status: 'uploading' } : f
+        ))
+
+        console.log(`🎯 Uploading file ${i + 1}/${validFiles.length}: ${fileToUpload.name}`)
+        await uploadFile(projectId, fileToUpload, existingFileId)
 
         // Update status to success
         setUploadQueue(prev => prev.map((f, idx) =>
@@ -158,20 +166,14 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
 
     setIsUploading(false)
     setCurrentUploadIndex(-1)
+    if (inputRef.current) inputRef.current.value = ''
 
-    // Clear input
-    if (inputRef.current) {
-      inputRef.current.value = ''
-    }
-
-    // Check if all uploads were successful
     const allSuccessful = validFiles.every((_, idx) => {
       const current = uploadQueue[idx]
       return current?.status === 'success'
     })
 
     if (allSuccessful || validFiles.length === 1) {
-      // Trigger completion callback after a short delay to show success state
       setTimeout(() => {
         onUploadComplete?.()
       }, 1000)
@@ -213,7 +215,7 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
         className={`
           relative rounded-xl border-2 border-dashed transition-all duration-200
           ${dragOver ? 'border-primary bg-primary/5 scale-[1.01]' : 'border-border'}
-          ${isUploading ? 'opacity-70 pointer-events-none' : 'hover:border-primary/60 hover:bg-primary/[0.02]'}
+          ${isUploading ? 'opacity-90 pointer-events-none' : 'hover:border-primary/60 hover:bg-primary/[0.02]'}
           ${error ? 'border-destructive/50 bg-destructive/5' : ''}
         `}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
@@ -226,9 +228,12 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
       >
         {isUploading ? (
           <div className="px-8 py-8 text-center">
+            {/* Progress UI */}
             <div className="mx-auto w-12 h-12 mb-4 rounded-full bg-primary/10 flex items-center justify-center">
               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
             </div>
+
+            {/* Network Upload Progress */}
             <div className="text-lg font-medium mb-2">
               Đang tải lên {currentUploadIndex + 1}/{totalCount} file...
             </div>
@@ -239,6 +244,7 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
               <Progress value={uploadProgress} className="h-2" />
             </div>
             <div className="text-xs text-muted-foreground">{uploadProgress}%</div>
+
           </div>
         ) : uploadQueue.length > 0 ? (
           <div className="px-6 py-6">
@@ -287,6 +293,7 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
                     <div className="text-xs text-muted-foreground">
                       {formatFileSize(item.file.size)}
                       {item.error && <span className="text-destructive ml-2">{item.error}</span>}
+                      {/* Show Optimized badge if it was optimized? we don't track that easily here without more state, but that's fine */}
                     </div>
                   </div>
 
@@ -409,3 +416,4 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
     </div>
   )
 }
+

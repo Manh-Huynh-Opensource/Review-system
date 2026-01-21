@@ -1,3 +1,5 @@
+import React from 'react';
+
 declare global {
     namespace JSX {
         interface IntrinsicElements {
@@ -9,10 +11,12 @@ declare global {
                 'ar-modes'?: string;
                 'camera-controls'?: boolean;
                 'ar-scale'?: string;
+                'ar-placement'?: string;
+                'shadow-intensity'?: string;
+                'environment-image'?: string;
+                loading?: string;
                 ref?: any;
             }, HTMLElement>;
         }
     }
 }
-
-export { };
