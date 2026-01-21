@@ -525,7 +525,8 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
         gl={{
           preserveDrawingBuffer: true,
           alpha: true,
-          antialias: true,
+          // Disable antialias on high-DPR (mobile) screens to save memory and prevent Safari crashes
+          antialias: window.devicePixelRatio <= 1,
           toneMapping: THREE.NoToneMapping,
           // NOTE: logarithmicDepthBuffer disabled as it can cause issues with transmission materials
         }}
