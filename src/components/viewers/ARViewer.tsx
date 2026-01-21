@@ -42,7 +42,6 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(({ url, iosSrc, a
     return (
         <>
             <div className="absolute top-0 left-0 w-0 h-0 overflow-hidden pointer-events-none opacity-0" aria-hidden="true">
-                {/* @ts-ignore */}
                 <model-viewer
                     ref={(el: HTMLElement | null) => {
                         // @ts-ignore
