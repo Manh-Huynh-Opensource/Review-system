@@ -512,23 +512,25 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
 
   const envPresets = ['city', 'sunset', 'dawn', 'night', 'warehouse', 'forest', 'apartment', 'studio', 'park', 'lobby']
 
+  // Detect mobile/high-performance constraint devices
+  const isMobile = typeof window !== 'undefined' && (window.devicePixelRatio > 1 || window.innerWidth < 768)
+
   return (
     <div className={cn("relative group", className ?? 'h-[400px]')}>
       <div className={cn("absolute inset-0 transition-colors duration-300", getBgClass())} />
 
       <Canvas
         key={`${resetTrigger}-${enableBloom}`} // Force re-mount when Bloom changes to fix glitch
-        shadows
+        shadows={!isMobile} // Disable shadows on mobile to save VRAM
         camera={{ position: [2, 1.2, 2], fov: 45 }}
-        dpr={[1, 2]}
+        dpr={isMobile ? 1 : [1, 2]} // Strict DPR cap 1.0 on mobile for stability
         className="relative z-0"
         gl={{
           preserveDrawingBuffer: true,
           alpha: true,
-          // Disable antialias on high-DPR (mobile) screens to save memory and prevent Safari crashes
-          antialias: window.devicePixelRatio <= 1,
+          // Disable antialias on high-DPR (mobile) screens
+          antialias: !isMobile,
           toneMapping: THREE.NoToneMapping,
-          // NOTE: logarithmicDepthBuffer disabled as it can cause issues with transmission materials
         }}
         // Enable transparent rendering
         style={{ background: 'transparent' }}
@@ -547,7 +549,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
             fileCameras={fileCameras}
             onCamerasDetected={handleCamerasDetected}
             initialCameraState={initialCameraState}
-            enableBloom={enableBloom}
+            enableBloom={isMobile ? false : enableBloom} // Force disable Bloom on mobile
             bloomIntensity={bloomIntensity}
             onAnimationsDetected={handleAnimationsDetected}
             isPlaying={isPlaying}
