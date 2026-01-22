@@ -16,12 +16,13 @@ interface UploadDialogProps {
   projectId: string
   existingFileId?: string
   trigger?: React.ReactNode
+  existingFileType?: string
   initialFiles?: File[]
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }
 
-export function UploadDialog({ projectId, existingFileId, trigger, initialFiles, open: controlledOpen, onOpenChange: setControlledOpen }: UploadDialogProps) {
+export function UploadDialog({ projectId, existingFileId, existingFileType, trigger, initialFiles, open: controlledOpen, onOpenChange: setControlledOpen }: UploadDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('single')
 
@@ -94,12 +95,20 @@ export function UploadDialog({ projectId, existingFileId, trigger, initialFiles,
 
         {existingFileId && (
           <div className="space-y-4">
-            <FileUploader
-              projectId={projectId}
-              existingFileId={existingFileId}
-              onUploadComplete={handleUploadComplete}
-              initialFiles={initialFiles}
-            />
+            {existingFileType === 'sequence' ? (
+              <SequenceUploader
+                projectId={projectId}
+                existingFileId={existingFileId}
+                onUploadComplete={handleUploadComplete}
+              />
+            ) : (
+              <FileUploader
+                projectId={projectId}
+                existingFileId={existingFileId}
+                onUploadComplete={handleUploadComplete}
+                initialFiles={initialFiles}
+              />
+            )}
           </div>
         )}
       </DialogContent>

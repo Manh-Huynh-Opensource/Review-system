@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,30 +14,48 @@ interface SequenceUploaderProps {
 }
 
 export function SequenceUploader({ projectId, existingFileId, onUploadComplete }: SequenceUploaderProps) {
-  const { uploadSequence, uploading, uploadProgress } = useFileStore()
+  const { uploadSequence, uploading, uploadProgress, files } = useFileStore()
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [sequenceName, setSequenceName] = useState('')
   const [fps, setFps] = useState(24)
   const [error, setError] = useState<string | null>(null)
 
+  // Pre-fill data if updating existing file
+  useEffect(() => {
+    if (existingFileId && files) {
+      const existingFile = files.find(f => f.id === existingFileId)
+      if (existingFile) {
+        setSequenceName(existingFile.name)
+
+        // Try to calculate previous FPS
+        const currentVersion = existingFile.versions.find(v => v.version === existingFile.currentVersion)
+        if (currentVersion?.metadata?.duration && currentVersion?.frameCount) {
+          const calculatedFps = Math.round(currentVersion.frameCount / currentVersion.metadata.duration)
+          if (calculatedFps > 0) setFps(calculatedFps)
+        }
+      }
+    }
+  }, [existingFileId, files])
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    
+
     if (files.length === 0) return
-    
+
     // Validate all files are images
     const invalidFiles = files.filter(f => !f.type.startsWith('image/'))
+
     if (invalidFiles.length > 0) {
       setError(`${invalidFiles.length} file(s) không phải là ảnh`)
       return
     }
-    
+
     // Sort by name for correct frame order
     const sorted = files.sort((a, b) => a.name.localeCompare(b.name))
     setSelectedFiles(sorted)
     setError(null)
-    
+
     // Auto-generate name from first file if empty
     if (!sequenceName && sorted.length > 0) {
       const baseName = sorted[0].name.replace(/\d+\..*$/, '').replace(/[_-]$/, '')
@@ -50,12 +68,12 @@ export function SequenceUploader({ projectId, existingFileId, onUploadComplete }
       setError('Chưa chọn file nào')
       return
     }
-    
+
     if (!sequenceName.trim()) {
       setError('Vui lòng nhập tên sequence')
       return
     }
-    
+
     try {
       await uploadSequence(projectId, selectedFiles, sequenceName.trim(), fps, existingFileId)
       setSelectedFiles([])
@@ -91,7 +109,7 @@ export function SequenceUploader({ projectId, existingFileId, onUploadComplete }
             </span>
           )}
         </div>
-        
+
         <div className="flex gap-2">
           <input
             ref={inputRef}
@@ -183,12 +201,12 @@ export function SequenceUploader({ projectId, existingFileId, onUploadComplete }
       {/* Upload Button */}
       {uploading ? (
         <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>Đang upload frames...</span>
-              <span className="text-muted-foreground">{selectedFiles.length} files • {uploadProgress}%</span>
-            </div>
-            <Progress value={uploadProgress} className="h-2" />
+          <div className="flex items-center justify-between text-sm">
+            <span>Đang upload frames...</span>
+            <span className="text-muted-foreground">{selectedFiles.length} files • {uploadProgress}%</span>
           </div>
+          <Progress value={uploadProgress} className="h-2" />
+        </div>
       ) : (
         <Button
           onClick={handleUpload}

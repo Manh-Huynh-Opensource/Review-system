@@ -2134,6 +2134,7 @@ export function FileViewDialogShared({
       <UploadDialog
         projectId={_projectId}
         existingFileId={file.id}
+        existingFileType={file.type}
         open={showUploadDialog}
         onOpenChange={setShowUploadDialog}
         initialFiles={droppedFiles}
