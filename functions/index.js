@@ -503,7 +503,7 @@ exports.onCommentCreated = functions.firestore
 
         // Use origin from comment if available (for custom domains), otherwise fallback to firebase default
         const baseUrl = comment.origin || `https://${process.env.GCLOUD_PROJECT}.web.app`;
-        const projectLink = `${baseUrl}/admin/projects/${projectId}`;
+        const projectLink = `${baseUrl}/app/projects/${projectId}`;
         const clientLink = `${baseUrl}/review/${projectId}`; // Link for unsubscribing
 
         const mailRef = admin.firestore().collection('mail').doc();
@@ -602,7 +602,7 @@ exports.onCommentUpdated = functions.firestore
           if (shouldSendToAdmin) {
             const baseUrl = `https://${process.env.GCLOUD_PROJECT}.web.app`;
             // Use project ID for admin dashboard link
-            const projectLink = `${baseUrl}/admin/projects/${projectId}`;
+            const projectLink = `${baseUrl}/app/projects/${projectId}`;
 
             const mailRef = admin.firestore().collection('mail').doc();
             await mailRef.set({
