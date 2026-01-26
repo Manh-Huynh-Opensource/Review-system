@@ -278,13 +278,27 @@ export const useFileStore = create<FileState>((set, get) => ({
       if (existingFileId) {
         console.log('🔄 Updating existing file...')
         const fileRef = doc(db, 'projects', projectId, 'files', fileId)
-        const existingFile = get().files.find(f => f.id === existingFileId)
+
+        // Re-fetch to minimize race condition window
+        const freshSnap = await getDoc(fileRef)
+        const freshData = freshSnap.data() as FileModel
+        const freshVersions = freshData?.versions || []
+
+        // Resolve version conflict
+        let finalVersion = currentVersion
+        while (freshVersions.some(v => v.version === finalVersion)) {
+          console.warn(`⚠️ Version collision detected for v${finalVersion}, incrementing...`)
+          finalVersion++
+        }
+
+        const finalNewVersion = { ...newVersion, version: finalVersion }
+
         await updateDoc(fileRef, {
-          versions: [...(existingFile?.versions || []), newVersion],
-          currentVersion
+          versions: [...freshVersions, finalNewVersion],
+          currentVersion: finalVersion
         })
-        console.log('✅ Existing file updated')
-        toast.success(`Đã tải phiên bản ${currentVersion} của ${existingFile?.name}`)
+        console.log('✅ Existing file updated to v', finalVersion)
+        toast.success(`Đã tải phiên bản ${finalVersion} của ${freshData?.name || file.name}`)
       } else {
         console.log('📄 Creating new file document...')
         const fileRef = doc(db, 'projects', projectId, 'files', fileId)
@@ -420,15 +434,28 @@ export const useFileStore = create<FileState>((set, get) => ({
 
       // Update or create Firestore doc
       if (existingFileId) {
-
         const fileRef = doc(db, 'projects', projectId, 'files', fileId)
-        const existingFile = get().files.find(f => f.id === existingFileId)
+
+        // Re-fetch to minimize race condition window
+        const freshSnap = await getDoc(fileRef)
+        const freshData = freshSnap.data() as FileModel
+        const freshVersions = freshData?.versions || []
+
+        // Resolve version conflict
+        let finalVersion = currentVersion
+        while (freshVersions.some(v => v.version === finalVersion)) {
+          console.warn(`⚠️ Sequence version collision detected for v${finalVersion}, incrementing...`)
+          finalVersion++
+        }
+
+        const finalNewVersion = { ...newVersion, version: finalVersion }
+
         await updateDoc(fileRef, {
-          versions: [...(existingFile?.versions || []), newVersion],
-          currentVersion
+          versions: [...freshVersions, finalNewVersion],
+          currentVersion: finalVersion
         })
 
-        toast.success(`Đã tải phiên bản ${currentVersion} của ${existingFile?.name}`)
+        toast.success(`Đã tải phiên bản ${finalVersion} của ${freshData?.name || name}`)
       } else {
 
         const fileRef = doc(db, 'projects', projectId, 'files', fileId)

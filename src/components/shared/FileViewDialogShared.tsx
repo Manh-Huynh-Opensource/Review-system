@@ -161,6 +161,20 @@ export function FileViewDialogShared({
   const [savingThumbnail, setSavingThumbnail] = useState(false)
   const [compareDisplayMode, setCompareDisplayMode] = useState<'side-by-side' | 'slider'>('side-by-side')
   const [comparePosition, setComparePosition] = useState<number>(50) // percent 0-100 for slider
+  // Create a unique list of versions to prevent duplicates in display
+  const uniqueVersions = useMemo(() => {
+    if (!file?.versions) return []
+    // Use a Map to keep unique versions, preferring the latest occurrence (assuming appending logic)
+    // or we can sort by uploadedAt if available.
+    // Given the issue is duplication in the array, simply keying by version number works.
+    const versionMap = new Map()
+    file.versions.forEach(v => {
+      // Always overwrite, so we get the last one in the array (usually the latest)
+      versionMap.set(v.version, v)
+    })
+    return Array.from(versionMap.values()).sort((a: any, b: any) => b.version - a.version)
+  }, [file?.versions])
+
   const [currentVersion, setCurrentVersion] = useState(file?.currentVersion || 1)
 
   // Annotation state
@@ -913,14 +927,19 @@ export function FileViewDialogShared({
       // Compare mode: show two images side-by-side with version selectors
       if (compareMode) {
         // determine defaults
-        const sorted = [...file.versions].sort((a, b) => b.version - a.version)
+        const sorted = uniqueVersions // Already sorted in useMemo
         const lv = leftVersion ?? currentVersion
-        const rv = rightVersion ?? (sorted.find(v => v.version !== lv)?.version ?? currentVersion)
+        const rv = rightVersion ?? (sorted.find((v: any) => v.version !== lv)?.version ?? currentVersion)
 
         const findUrl = (vnum: number | null) => {
           if (!vnum) return undefined
+          // Special handling for sequence frames
+          if (sequenceContext) {
+            const vv = uniqueVersions.find((v: any) => v.version === vnum)
+            return vv?.sequenceUrls?.[sequenceContext.currentFrameIndex]
+          }
           if (vnum === currentVersion && resolvedUrl) return resolvedUrl
-          const vv = file.versions.find(v => v.version === vnum)
+          const vv = uniqueVersions.find((v: any) => v.version === vnum)
           return vv?.url
         }
 
@@ -928,7 +947,26 @@ export function FileViewDialogShared({
         const rightUrl = findUrl(rv)
 
         return (
-          <div className="p-2 max-h-[70vh] overflow-auto">
+          <div
+            className="p-2 w-full h-full overflow-hidden relative"
+            onMouseDown={(e) => {
+              if (zoom > 1) {
+                setIsDragging(true)
+                setLastMousePos({ x: e.clientX, y: e.clientY })
+                e.preventDefault()
+              }
+            }}
+            onMouseMove={(e) => {
+              if (isDragging && zoom > 1) {
+                const deltaX = (e.clientX - lastMousePos.x) / zoom
+                const deltaY = (e.clientY - lastMousePos.y) / zoom
+                setPanOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }))
+                setLastMousePos({ x: e.clientX, y: e.clientY })
+              }
+            }}
+            onMouseUp={() => setIsDragging(false)}
+            onMouseLeave={() => setIsDragging(false)}
+          >
             {/* Mode switch */}
             <div className="flex items-center gap-2 mb-2">
               <div className="text-xs text-muted-foreground mr-2">Chế độ:</div>
@@ -938,6 +976,13 @@ export function FileViewDialogShared({
               <Button variant={compareDisplayMode === 'slider' ? 'secondary' : 'outline'} size="sm" onClick={() => setCompareDisplayMode('slider')}>
                 <Columns className="w-4 h-4 mr-1" /> Slider
               </Button>
+
+              {/* Frame Counter in Toolbar */}
+              {sequenceContext && (
+                <div className="ml-auto bg-muted px-3 py-1.5 rounded-md text-sm font-mono border">
+                  Frame {sequenceContext.currentFrameIndex + 1} / {sequenceContext.totalFrames}
+                </div>
+              )}
             </div>
 
             {compareDisplayMode === 'side-by-side' ? (
@@ -951,9 +996,8 @@ export function FileViewDialogShared({
                         <Button variant="outline" size="sm">v{lv}<ChevronDown className="w-3 h-3" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
-                        {file.versions
-                          .sort((a, b) => b.version - a.version)
-                          .map(v => (
+                        {uniqueVersions
+                          .map((v: any) => (
                             <DropdownMenuItem key={v.version} onClick={() => setLeftVersion(v.version)}>
                               v{v.version}
                             </DropdownMenuItem>
@@ -961,12 +1005,25 @@ export function FileViewDialogShared({
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="flex-1 bg-muted/20 flex items-center justify-center">
-                    {leftUrl ? (
-                      <img src={leftUrl} alt={`v${lv}`} className="w-full h-full object-contain" />
-                    ) : (
-                      <div className="text-sm text-muted-foreground">Không có ảnh</div>
-                    )}
+                  <div className="flex-1 bg-muted/20 flex items-center justify-center overflow-hidden">
+                    <div
+                      className="w-full h-full flex items-center justify-center origin-center cursor-grab active:cursor-grabbing"
+                      style={{
+                        transform: `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                        pointerEvents: zoom > 1 ? 'auto' : 'none'
+                      }}
+                    >
+                      {leftUrl ? (
+                        <img
+                          src={leftUrl}
+                          alt={`v${lv}`}
+                          className="w-full h-full object-contain select-none shadow-none"
+                          draggable={false}
+                        />
+                      ) : (
+                        <div className="text-sm text-muted-foreground">Không có ảnh</div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -979,9 +1036,8 @@ export function FileViewDialogShared({
                         <Button variant="outline" size="sm">v{rv}<ChevronDown className="w-3 h-3" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
-                        {file.versions
-                          .sort((a, b) => b.version - a.version)
-                          .map(v => (
+                        {uniqueVersions
+                          .map((v: any) => (
                             <DropdownMenuItem key={v.version} onClick={() => setRightVersion(v.version)}>
                               v{v.version}
                             </DropdownMenuItem>
@@ -989,19 +1045,38 @@ export function FileViewDialogShared({
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="flex-1 bg-muted/20 flex items-center justify-center">
-                    {rightUrl ? (
-                      <img src={rightUrl} alt={`v${rv}`} className="w-full h-full object-contain" />
-                    ) : (
-                      <div className="text-sm text-muted-foreground">Không có ảnh</div>
-                    )}
+                  <div className="flex-1 bg-muted/20 flex items-center justify-center overflow-hidden">
+                    <div
+                      className="w-full h-full flex items-center justify-center origin-center cursor-grab active:cursor-grabbing"
+                      style={{
+                        transform: `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                        pointerEvents: zoom > 1 ? 'auto' : 'none'
+                      }}
+                    >
+                      {rightUrl ? (
+                        <img
+                          src={rightUrl}
+                          alt={`v${rv}`}
+                          className="w-full h-full object-contain select-none shadow-none"
+                          draggable={false}
+                        />
+                      ) : (
+                        <div className="text-sm text-muted-foreground">Không có ảnh</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             ) : (
               // Slider overlay mode using react-compare-slider
               <div className="p-2">
-                <div className="max-h-[70vh]">
+                <div
+                  className="max-h-[70vh] origin-center cursor-grab active:cursor-grabbing"
+                  style={{
+                    transform: `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                    pointerEvents: zoom > 1 ? 'auto' : 'none'
+                  }}
+                >
                   {leftUrl && rightUrl ? (
                     <ReactCompareSlider
                       itemOne={<ReactCompareSliderImage src={leftUrl} alt={`v${lv}`} />}
@@ -1017,6 +1092,46 @@ export function FileViewDialogShared({
                 </div>
               </div>
             )}
+
+            {/* Zoom Controls for Compare Mode */}
+            <div className="absolute top-12 right-2 z-20 bg-background/80 backdrop-blur-sm border border-border/50 rounded-md shadow-sm flex items-center gap-1 p-1 pointer-events-auto">
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}>
+                <span className="font-medium">-</span>
+              </Button>
+              <div className="text-xs text-muted-foreground w-10 text-center">{Math.round(zoom * 100)}%</div>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(4, z + 0.25))}>
+                <span className="font-medium">+</span>
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => { setZoom(1); setPanOffset({ x: 0, y: 0 }) }}>Reset</Button>
+            </div>
+
+            {/* Sequence Navigation Controls Overlay for Compare Mode */}
+            {sequenceContext && (
+              <>
+                {/* Frame Counter moved to toolbar */}
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/60 hover:bg-background/80 backdrop-blur-sm border border-border/50 rounded-full z-10"
+                  onClick={() => sequenceContext.onNavigateFrame?.(Math.max(0, sequenceContext.currentFrameIndex - 1))}
+                  disabled={sequenceContext.currentFrameIndex === 0}
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/60 hover:bg-background/80 backdrop-blur-sm border border-border/50 rounded-full z-10"
+                  onClick={() => sequenceContext.onNavigateFrame?.(Math.min(sequenceContext.totalFrames - 1, sequenceContext.currentFrameIndex + 1))}
+                  disabled={sequenceContext.currentFrameIndex === sequenceContext.totalFrames - 1}
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+              </>
+            )}
+
           </div>
         )
       }
@@ -1281,9 +1396,9 @@ export function FileViewDialogShared({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      {file.versions
-                        .filter(v => v.version !== currentVersion)
-                        .map(v => (
+                      {uniqueVersions
+                        .filter((v: any) => v.version !== currentVersion)
+                        .map((v: any) => (
                           <DropdownMenuItem
                             key={v.version}
                             onClick={() => videoComparison.setSecondaryVersion(v.version)}
@@ -1549,9 +1664,8 @@ export function FileViewDialogShared({
                         <div className="font-semibold text-sm">Lịch sử phiên bản</div>
                       </div>
                       <div className="max-h-[300px] overflow-y-auto">
-                        {file.versions
-                          .sort((a, b) => b.version - a.version)
-                          .map((version) => (
+                        {uniqueVersions
+                          .map((version: any) => (
                             <DropdownMenuItem
                               key={version.version}
                               className="flex items-center justify-between p-3 cursor-pointer"
@@ -2145,19 +2259,21 @@ export function FileViewDialogShared({
       />
 
       {/* Drag & Drop Overlay */}
-      {isDragOver && (
-        <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center border-4 border-primary border-dashed rounded-lg m-4 pointer-events-none">
-          <div className="bg-primary/10 p-8 rounded-full mb-6 animate-bounce">
-            <Upload className="w-16 h-16 text-primary" />
+      {
+        isDragOver && (
+          <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center border-4 border-primary border-dashed rounded-lg m-4 pointer-events-none">
+            <div className="bg-primary/10 p-8 rounded-full mb-6 animate-bounce">
+              <Upload className="w-16 h-16 text-primary" />
+            </div>
+            <h3 className="text-3xl font-bold text-primary mb-2">
+              Thả file để cập nhật phiên bản mới
+            </h3>
+            <p className="text-lg text-muted-foreground">
+              Phiên bản mới sẽ được thêm vào lịch sử phiên bản của file này
+            </p>
           </div>
-          <h3 className="text-3xl font-bold text-primary mb-2">
-            Thả file để cập nhật phiên bản mới
-          </h3>
-          <p className="text-lg text-muted-foreground">
-            Phiên bản mới sẽ được thêm vào lịch sử phiên bản của file này
-          </p>
-        </div>
-      )}
+        )
+      }
     </>
   )
 }
