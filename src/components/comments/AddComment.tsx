@@ -297,8 +297,8 @@ export function AddComment({
             <div className="space-y-2">
                 <RichTextarea
                     ref={textareaRef}
-                    placeholder={showTimestamp && currentTimestamp !== undefined
-                        ? `Bình luận tại ${formatTime(currentTimestamp)}...`
+                    placeholder={showTimestamp
+                        ? 'Viết bình luận (sẽ gắn thẻ thời gian hiện tại)...'
                         : 'Viết bình luận...'}
                     value={content}
                     onChange={async (val) => {

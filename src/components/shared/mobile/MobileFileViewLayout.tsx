@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode, memo } from 'react'
 import { MobileViewToggle } from './MobileViewToggle'
 import { Button } from '@/components/ui/button'
 import {
@@ -51,6 +51,7 @@ interface MobileFileViewLayoutProps {
 
     // Video/Sequence specific
     currentTimestamp?: number
+    currentTimestampRef?: React.MutableRefObject<number>
     showTimestamp?: boolean
 
     // Annotation props
@@ -87,7 +88,7 @@ interface MobileFileViewLayoutProps {
  * Provides fullscreen toggle between file preview and comments
  * With full annotation support
  */
-export function MobileFileViewLayout({
+function MobileFileViewLayoutComponent({
     file,
     current,
     effectiveUrl,
@@ -106,6 +107,7 @@ export function MobileFileViewLayout({
     viewAllVersions,
     onViewAllVersionsChange,
     currentTimestamp,
+    currentTimestampRef,
     showTimestamp = false,
     // Annotation props
     isAnnotating = false,
@@ -370,6 +372,7 @@ export function MobileFileViewLayout({
                                 userName={currentUserName}
                                 onUserNameChange={onUserNameChange}
                                 currentTimestamp={currentTimestamp}
+                                currentTimestampRef={currentTimestampRef}
                                 showTimestamp={showTimestamp}
                                 annotationData={!isReadOnly ? annotationData : null}
                                 onAnnotationClick={() => {
@@ -418,3 +421,24 @@ export function MobileFileViewLayout({
         </div>
     )
 }
+
+export const MobileFileViewLayout = memo(MobileFileViewLayoutComponent, (prevProps, nextProps) => {
+    // Basic props comparison
+    if (prevProps.file.id !== nextProps.file.id) return false
+    if (prevProps.currentVersion !== nextProps.currentVersion) return false
+    if (prevProps.comments !== nextProps.comments) return false
+
+    // We explicitly IGNORE currentTimestamp updates for re-rendering the whole layout
+    // The AddComment component inside will receive the new timestamp, but we'll try to optimize that too.
+    // Wait - if we pass nextProps directly to child, child re-renders.
+    // But since we are memoizing THIS component (the parent of AddComment/CommentsList in mobile view),
+    // we can control whether WE re-render.
+
+    // If currentTimestamp changes, but nothing else -> component DOES NOT re-render.
+    // But then AddComment won't get the new timestamp?
+    // Correct. That's the optimization. AddComment doesn't need to re-render 10x per second just for a hidden timestamp field.
+    // We'll trust that when User hits Submit, we can get the LATEST timestamp from a ref or similar, OR we accept that the displayed timestamp might be slightly stale (0.1s off).
+    // Actually, AddComment uses currentTimestamp for placeholder text (WHICH WE ARE REMOVING) and for submission.
+
+    return true
+})

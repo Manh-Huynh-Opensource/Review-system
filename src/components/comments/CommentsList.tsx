@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from 'date-fns'
 import { linkifyText } from '@/lib/linkify'
 import { vi } from 'date-fns/locale'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, memo } from 'react'
 import type { Comment } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,7 +33,7 @@ interface CommentsListProps {
   showVersionBadge?: boolean
 }
 
-export function CommentsList({
+function CommentsListComponent({
   comments,
   onResolveToggle,
   onTimestampClick,
@@ -717,3 +717,24 @@ export function CommentsList({
     </>
   )
 }
+
+// Export memoized component
+export const CommentsList = memo(CommentsListComponent, (prevProps, nextProps) => {
+  // Only re-render if key props change
+  if (prevProps.comments.length !== nextProps.comments.length) return false
+  if (prevProps.showVersionBadge !== nextProps.showVersionBadge) return false
+  if (prevProps.currentUserName !== nextProps.currentUserName) return false
+  if (prevProps.isLocked !== nextProps.isLocked) return false
+
+  // Deep check comment IDs if lengths matched (basic check)
+  if (prevProps.comments !== nextProps.comments) {
+    // If reference changed but content basically same? 
+    // For now, let's assume if reference changes, we re-render.
+    // The issue is parent passing new array reference every 100ms?
+    // No, `allFileComments` is memoized in parent.
+    // But `comments` prop might be filtered.
+    return prevProps.comments === nextProps.comments
+  }
+
+  return true
+})

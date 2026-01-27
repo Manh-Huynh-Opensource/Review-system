@@ -159,6 +159,7 @@ export function FileViewDialogShared({
   const [videoDuration, setVideoDuration] = useState(0)
   const [currentAnnotationCommentId, setCurrentAnnotationCommentId] = useState<string | null>(null)
 
+  const currentTimeRef = useRef(0)
   const customVideoPlayerRef = useRef<CustomVideoPlayerRef>(null)
 
   const glbViewerRef = useRef<GLBViewerRef>(null)
@@ -277,6 +278,7 @@ export function FileViewDialogShared({
   // Memoize video player callbacks to prevent CustomVideoPlayer re-renders
   const handleTimeUpdate = useCallback((time: number) => {
     setCurrentTime(time)
+    currentTimeRef.current = time
   }, [])
 
   const handleFullscreenChange = useCallback((fullscreen: boolean) => {
@@ -1624,6 +1626,7 @@ export function FileViewDialogShared({
           viewAllVersions={viewAllVersions}
           onViewAllVersionsChange={setViewAllVersions}
           currentTimestamp={file.type === 'video' ? currentTime : (file.type === 'sequence' ? currentFrame : undefined)}
+          currentTimestampRef={currentTimeRef}
           showTimestamp={file.type === 'video' || file.type === 'sequence'}
           // Annotation props
           isAnnotating={isAnnotating}
