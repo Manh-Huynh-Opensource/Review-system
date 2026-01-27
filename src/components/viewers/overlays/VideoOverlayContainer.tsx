@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode, memo } from 'react'
 
 interface VideoOverlayContainerProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
@@ -52,7 +52,7 @@ function calculateVideoDimensions(
  * VideoOverlayContainer positions an overlay layer exactly on top of the video content.
  * It uses ResizeObserver to track video element changes and recalculates dimensions.
  */
-export function VideoOverlayContainer({ videoRef, children }: VideoOverlayContainerProps) {
+export function VideoOverlayContainerComponent({ videoRef, children }: VideoOverlayContainerProps) {
     const [dimensions, setDimensions] = useState<OverlayDimensions | null>(null)
     const [videoRect, setVideoRect] = useState<{ top: number; left: number } | null>(null)
 
@@ -125,3 +125,5 @@ export function VideoOverlayContainer({ videoRef, children }: VideoOverlayContai
         </div>
     )
 }
+
+export const VideoOverlayContainer = memo(VideoOverlayContainerComponent)

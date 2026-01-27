@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 interface SafeZoneOverlayProps {
     /** URL or path to the safe zone image (PNG) */
     safeZoneUrl: string | null
@@ -9,7 +11,7 @@ interface SafeZoneOverlayProps {
  * SafeZoneOverlay renders a safe zone image on top of the video.
  * The image fills the overlay container and uses the specified opacity.
  */
-export function SafeZoneOverlay({ safeZoneUrl, opacity = 0.2 }: SafeZoneOverlayProps) {
+export function SafeZoneOverlayComponent({ safeZoneUrl, opacity = 0.2 }: SafeZoneOverlayProps) {
     if (!safeZoneUrl) return null
 
     return (
@@ -30,3 +32,5 @@ export function SafeZoneOverlay({ safeZoneUrl, opacity = 0.2 }: SafeZoneOverlayP
         />
     )
 }
+
+export const SafeZoneOverlay = memo(SafeZoneOverlayComponent)

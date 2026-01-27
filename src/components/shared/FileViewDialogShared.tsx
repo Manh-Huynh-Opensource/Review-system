@@ -37,7 +37,8 @@ import {
   Trash2,
   Volume2,
   VolumeX,
-  Layers
+  Layers,
+  Loader2
 } from 'lucide-react'
 import { startFileTour, hasSeenTour } from '@/lib/fileTours'
 import {
@@ -72,6 +73,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { MobileFileViewLayout } from './mobile/MobileFileViewLayout'
 
 const GLBViewer = lazy(() => import('@/components/viewers/GLBViewer').then(m => ({ default: m.GLBViewer })))
+const CanvasContainer = lazy(() => import('@/components/canvas/CanvasContainer'))
 
 interface Props {
   file: FileType | null
@@ -110,6 +112,7 @@ const getFileTypeIcon = (type: string) => {
   if (type === 'model') return <Box className="w-5 h-5 text-purple-500" />
   if (type === 'sequence') return <Film className="w-5 h-5 text-orange-500" />
   if (type === 'pdf' || type.endsWith('.pdf')) return <FileText className="w-5 h-5 text-red-500" />
+  if (type === 'canvas') return <Pencil className="w-5 h-5 text-pink-500" />
   return <FileImage className="w-5 h-5 text-gray-500" />
 }
 
@@ -119,6 +122,7 @@ const getFileTypeLabel = (type: string) => {
   if (type === 'model') return 'Mô hình 3D'
   if (type === 'sequence') return 'Image Sequence'
   if (type === 'pdf' || type.endsWith('.pdf')) return 'PDF'
+  if (type === 'canvas') return 'Canvas'
   return 'Tệp tin'
 }
 
@@ -1550,6 +1554,28 @@ export function FileViewDialogShared({
 
 
 
+    if (file.type === 'canvas') {
+      return (
+        <Suspense fallback={
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground bg-background">
+            <Loader2 className="w-8 h-8 animate-spin" />
+            <p>Đang tải module Canvas...</p>
+          </div>
+        }>
+          <CanvasContainer
+            file={file}
+            projectId={_projectId}
+            currentVersion={currentVersion}
+            onVersionSelect={(v: number) => {
+              setCurrentVersion(v)
+              onSwitchVersion?.(file.id, v)
+            }}
+            isAdmin={isAdmin}
+          />
+        </Suspense>
+      )
+    }
+
     return (
       <div className="flex items-center justify-center h-[50vh] bg-muted/20">
         <div className="text-center text-muted-foreground">
@@ -1986,46 +2012,48 @@ export function FileViewDialogShared({
               {/* Main Content Area */}
               <div className={`flex-1 overflow-y-auto overflow-x-hidden bg-background/50 flex flex-col ${showComments && !isVideoFullscreen ? '' : ''}`}>
                 {/* Toolbar for Annotation */}
-                <div id="annotation-toolbar" className="p-2 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 gap-2">
-                  <div className="hidden sm:flex items-center gap-2 w-full sm:w-auto">
-                    {!isAnnotating ? (
-                      <Button onClick={handleStartAnnotating} variant="outline" size="sm" className="gap-2 flex-1 sm:flex-initial">
-                        <div className="w-4 h-4 rounded-full bg-yellow-400 border border-yellow-600" />
-                        Thêm ghi chú
-                      </Button>
-                    ) : isReadOnly ? (
-                      <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-                        <div className="text-sm font-medium text-muted-foreground">
-                          Đang xem ghi chú
-                        </div>
-                        <Button onClick={handleDoneAnnotating} variant="ghost" size="sm" className="h-7 px-2 hover:bg-destructive/10 hover:text-destructive">
-                          Đóng
+                {file.type !== 'canvas' && (
+                  <div id="annotation-toolbar" className="p-2 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 gap-2">
+                    <div className="hidden sm:flex items-center gap-2 w-full sm:w-auto">
+                      {!isAnnotating ? (
+                        <Button onClick={handleStartAnnotating} variant="outline" size="sm" className="gap-2 flex-1 sm:flex-initial">
+                          <div className="w-4 h-4 rounded-full bg-yellow-400 border border-yellow-600" />
+                          Thêm ghi chú
                         </Button>
-                      </div>
-                    ) : (
-                      <div className="text-sm font-medium text-muted-foreground animate-pulse">
-                        Đang vẽ ghi chú...
+                      ) : isReadOnly ? (
+                        <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                          <div className="text-sm font-medium text-muted-foreground">
+                            Đang xem ghi chú
+                          </div>
+                          <Button onClick={handleDoneAnnotating} variant="ghost" size="sm" className="h-7 px-2 hover:bg-destructive/10 hover:text-destructive">
+                            Đóng
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="text-sm font-medium text-muted-foreground animate-pulse">
+                          Đang vẽ ghi chú...
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Filter Toggle - Desktop only */}
+                    {(file.type === 'video' || file.type === 'sequence') && (
+                      <div className="hidden sm:flex items-center gap-2">
+                        <Button
+                          variant={showOnlyCurrentTimeComments ? 'secondary' : 'ghost'}
+                          size="sm"
+                          id="filter-time-toggle"
+                          onClick={() => setShowOnlyCurrentTimeComments(!showOnlyCurrentTimeComments)}
+                          className={`${showOnlyCurrentTimeComments ? 'bg-primary/10 text-primary hover:bg-primary/20' : ''}`}
+                          title="Chỉ hiện bình luận tại thời điểm này"
+                        >
+                          <Filter className="w-4 h-4 mr-2" />
+                          {showOnlyCurrentTimeComments ? 'Đang lọc theo thời gian' : 'Lọc theo thời gian'}
+                        </Button>
                       </div>
                     )}
                   </div>
-
-                  {/* Filter Toggle - Desktop only */}
-                  {(file.type === 'video' || file.type === 'sequence') && (
-                    <div className="hidden sm:flex items-center gap-2">
-                      <Button
-                        variant={showOnlyCurrentTimeComments ? 'secondary' : 'ghost'}
-                        size="sm"
-                        id="filter-time-toggle"
-                        onClick={() => setShowOnlyCurrentTimeComments(!showOnlyCurrentTimeComments)}
-                        className={`${showOnlyCurrentTimeComments ? 'bg-primary/10 text-primary hover:bg-primary/20' : ''}`}
-                        title="Chỉ hiện bình luận tại thời điểm này"
-                      >
-                        <Filter className="w-4 h-4 mr-2" />
-                        {showOnlyCurrentTimeComments ? 'Đang lọc theo thời gian' : 'Lọc theo thời gian'}
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                )}
 
                 {/* File Preview */}
                 <div id="preview-container" className="flex-1 p-0 sm:p-2 flex items-center justify-center min-h-0 overflow-x-hidden overflow-y-visible sm:overflow-hidden">
@@ -2033,7 +2061,7 @@ export function FileViewDialogShared({
                 </div>
               </div>
 
-              {showComments && !isVideoFullscreen && (
+              {showComments && !isVideoFullscreen && file.type !== 'canvas' && (
                 <div className="contents">
                   {/* Resize Handle */}
                   <div

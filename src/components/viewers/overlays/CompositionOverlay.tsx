@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 export type CompositionGuide =
     | 'center'
     | 'thirds'
@@ -113,7 +115,7 @@ function getExtendedEndPoint(
  * 
  * Lines are styled as thin dashed lines with low opacity for subtle guidance.
  */
-export function CompositionOverlay({
+export function CompositionOverlayComponent({
     activeGuides,
     videoRatio = 16 / 9,
     color = '#ffffff',
@@ -341,3 +343,5 @@ export function CompositionOverlay({
         </svg>
     )
 }
+
+export const CompositionOverlay = memo(CompositionOverlayComponent)

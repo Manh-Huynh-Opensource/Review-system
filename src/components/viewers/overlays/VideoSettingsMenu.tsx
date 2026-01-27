@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContentNoPortal, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -55,7 +55,7 @@ const COMPOSITION_GUIDE_OPTIONS: { id: CompositionGuide; label: string; group?: 
     { id: 'harmonyB', label: 'Triangle B', group: 'Harmony' },
 ]
 
-export function VideoSettingsMenu({
+export function VideoSettingsMenuComponent({
     videoRatio,
     activeSafeZone,
     onSafeZoneChange,
@@ -301,3 +301,5 @@ export function VideoSettingsMenu({
         </Popover>
     )
 }
+
+export const VideoSettingsMenu = memo(VideoSettingsMenuComponent)

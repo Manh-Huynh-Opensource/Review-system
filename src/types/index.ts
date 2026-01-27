@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore'
 
-export type FileType = 'image' | 'video' | 'model' | 'sequence' | 'pdf'
+export type FileType = 'image' | 'video' | 'model' | 'sequence' | 'pdf' | 'canvas'
 export type ProjectStatus = 'active' | 'archived' | 'trash'
 
 export interface Client {

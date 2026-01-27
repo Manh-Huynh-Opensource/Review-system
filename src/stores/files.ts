@@ -58,6 +58,8 @@ interface FileState {
     lightIntensity?: number
     gamma?: number
   }) => Promise<void>
+  createCanvasFile: (projectId: string, name: string) => Promise<string>
+  saveCanvasVersion: (projectId: string, fileId: string, canvasData: any) => Promise<void>
   cleanupProjectFiles: (projectId: string) => Promise<void>
   cleanup: () => void
 }
@@ -1269,6 +1271,110 @@ export const useFileStore = create<FileState>((set, get) => ({
       console.error('Error updating model settings:', error)
       toast.error('Lỗi khi lưu cấu hình: ' + error.message)
       throw error
+    }
+  },
+
+  createCanvasFile: async (projectId: string, name: string) => {
+    set({ uploading: true, uploadProgress: 0, error: null })
+    try {
+      const fileId = generateId()
+      const version = 1
+      const fileName = `${name}.json`
+      const storagePath = `projects/${projectId}/${fileId}/v${version}/${fileName}`
+      const storageRef = ref(storage, storagePath)
+
+      // Initial empty canvas state for Konva
+      const initialData = {
+        shapes: [],
+        stagePos: { x: 0, y: 0 },
+        stageScale: 1
+      }
+      const jsonString = JSON.stringify(initialData)
+      const blob = new Blob([jsonString], { type: 'application/json' })
+
+      await uploadBytes(storageRef, blob)
+      const url = await getDownloadURL(storageRef)
+
+      const newVersion: FileVersion = {
+        url,
+        version,
+        uploadedAt: Timestamp.now(),
+        metadata: {
+          size: blob.size,
+          type: 'application/json',
+          name: fileName
+        },
+        validationStatus: 'clean'
+      }
+
+      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+      const newFileData = {
+        name,
+        type: 'canvas' as const,
+        versions: [newVersion],
+        currentVersion: version,
+        createdAt: Timestamp.now()
+      }
+
+      await setDoc(fileRef, newFileData)
+      toast.success(`Đã tạo Canvas "${name}"`)
+      return fileId
+    } catch (error: any) {
+      console.error('❌ Create Canvas failed:', error)
+      const errorMessage = 'Tạo Canvas thất bại: ' + (error.message || 'Lỗi không xác định')
+      set({ error: errorMessage })
+      toast.error(errorMessage)
+      throw error
+    } finally {
+      set({ uploading: false })
+    }
+  },
+
+  saveCanvasVersion: async (projectId: string, fileId: string, canvasData: any) => {
+    set({ uploading: true, uploadProgress: 0, error: null })
+    try {
+      const file = get().files.find(f => f.id === fileId)
+      if (!file) throw new Error('File không tồn tại')
+
+      const nextVersion = file.versions.length + 1
+      const fileName = `${file.name}.json`
+      const storagePath = `projects/${projectId}/${fileId}/v${nextVersion}/${fileName}`
+      const storageRef = ref(storage, storagePath)
+
+      const jsonString = JSON.stringify(canvasData)
+      const blob = new Blob([jsonString], { type: 'application/json' })
+
+      await uploadBytes(storageRef, blob)
+      const url = await getDownloadURL(storageRef)
+
+      const newVersion: FileVersion = {
+        url,
+        version: nextVersion,
+        uploadedAt: Timestamp.now(),
+        metadata: {
+          size: blob.size,
+          type: 'application/json',
+          name: fileName
+        },
+        validationStatus: 'clean'
+      }
+
+      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+      await updateDoc(fileRef, {
+        versions: [...file.versions, newVersion],
+        currentVersion: nextVersion,
+        updatedAt: Timestamp.now()
+      })
+
+      toast.success(`Đã lưu phiên bản ${nextVersion}`)
+    } catch (error: any) {
+      console.error('❌ Save Canvas failed:', error)
+      const errorMessage = 'Lưu Canvas thất bại: ' + (error.message || 'Lỗi không xác định')
+      set({ error: errorMessage })
+      toast.error(errorMessage)
+      throw error
+    } finally {
+      set({ uploading: false })
     }
   },
 

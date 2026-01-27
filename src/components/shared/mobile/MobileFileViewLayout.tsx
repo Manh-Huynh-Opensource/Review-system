@@ -316,7 +316,7 @@ export function MobileFileViewLayout({
                     )}
 
                     {/* Comments List */}
-                    <div className="flex-1 overflow-y-auto p-3 pb-32">
+                    <div className="flex-1 overflow-y-auto p-3 min-h-0 basic-scroll">
                         <CommentsList
                             comments={comments}
                             currentUserName={currentUserName}
@@ -352,8 +352,8 @@ export function MobileFileViewLayout({
                         )}
                     </div>
 
-                    {/* Add Comment - Fixed at bottom */}
-                    <div className="absolute bottom-16 left-0 right-0 p-3 border-t bg-background/95 backdrop-blur-lg safe-area-pb">
+                    {/* Add Comment - In flow at bottom, with padding for Toggle */}
+                    <div className={`flex-shrink-0 border-t bg-background/95 backdrop-blur-lg p-2 ${!isAnnotating ? 'pb-[60px]' : 'safe-area-pb'}`}>
                         {isLocked ? (
                             <div className="text-center text-muted-foreground py-2 px-2 bg-muted/30 rounded-md">
                                 <div className="flex items-center justify-center gap-2 text-xs">

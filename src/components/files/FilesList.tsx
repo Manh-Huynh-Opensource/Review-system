@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { ref, getDownloadURL } from 'firebase/storage'
 import { storage } from '@/lib/firebase'
 import { formatFileSize } from '@/lib/utils'
-import { Trash2, X, CheckSquare, Square, Grid3x3, List, MessageSquare, Calendar, FileImage, Video, Box, FileText, Download } from 'lucide-react'
+import { Trash2, X, CheckSquare, Square, Grid3x3, List, MessageSquare, Calendar, FileImage, Video, Box, FileText, Download, Pencil } from 'lucide-react'
 import type { File as FileType } from '@/types'
 import { useBulkDownload } from '@/hooks/useBulkDownload'
 import { DownloadProgressDialog } from '@/components/dashboard/DownloadProgressDialog'
@@ -34,6 +34,7 @@ const getFileTypeLabel = (type: string) => {
   if (type === 'model') return 'Mô hình 3D'
   if (type === 'sequence') return 'Image Sequence'
   if (type === 'pdf') return 'PDF'
+  if (type === 'canvas') return 'Canvas'
   return 'Tệp tin'
 }
 
@@ -642,6 +643,15 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
                 return (
                   <div className="w-full h-full flex items-center justify-center bg-red-100 dark:bg-red-950/30">
                     <FileText className="w-8 h-8 text-red-500" />
+                  </div>
+                )
+              }
+
+              // Canvas files
+              if (file.type === 'canvas') {
+                return (
+                  <div className="w-full h-full flex items-center justify-center bg-pink-100 dark:bg-pink-950/30">
+                    <Pencil className="w-8 h-8 text-pink-500" />
                   </div>
                 )
               }

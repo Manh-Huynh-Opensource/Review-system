@@ -9,12 +9,13 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowUpDown, Calendar, FileType, Download, Search, X, Share2, Check, Mail } from 'lucide-react'
+import { ArrowUpDown, Calendar, FileType, Download, Search, X, Share2, Check, Mail, Pencil } from 'lucide-react'
 import type { Project } from '@/types'
 import { toast } from 'react-hot-toast'
 import { ProjectEditDialog } from '@/components/projects/ProjectEditDialog'
 import { ProjectShareDialog } from '@/components/dashboard/ProjectShareDialog'
 import { SubscribersListDialog } from '@/components/projects/SubscribersListDialog'
+import { CreateCanvasDialog } from '@/components/canvas/CreateCanvasDialog'
 
 type SortOption = 'name' | 'date' | 'type' | 'size'
 type SortDirection = 'asc' | 'desc'
@@ -31,6 +32,7 @@ export default function ProjectDetailPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [copied, setCopied] = useState(false)
   const [showSubscribers, setShowSubscribers] = useState(false)
+  const [showCreateCanvas, setShowCreateCanvas] = useState(false)
 
   const handleCopyReviewLink = async () => {
     if (!projectId) return
@@ -146,7 +148,20 @@ export default function ProjectDetailPage() {
             projectId={projectId!}
             resourceName={project.name}
           />
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setShowCreateCanvas(true)}
+          >
+            <Pencil className="h-4 w-4" />
+            <span className="hidden sm:inline">Tạo Canvas</span>
+          </Button>
           {projectId && <UploadDialog projectId={projectId} />}
+          <CreateCanvasDialog
+            projectId={projectId!}
+            open={showCreateCanvas}
+            onOpenChange={setShowCreateCanvas}
+          />
         </div>
       </div>
 

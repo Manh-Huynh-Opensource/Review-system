@@ -1,15 +1,13 @@
 import { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallback, memo } from 'react'
-import { Play, Pause, Volume2, VolumeX, Maximize, StickyNote, Camera, Repeat, PictureInPicture2, Loader2 } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX, Maximize, StickyNote, Camera, Repeat, PictureInPicture2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { Comment } from '@/types'
 import './CustomVideoPlayer.css'
 import {
-    VideoOverlayContainer,
-    SafeZoneOverlay,
-    CompositionOverlay,
     VideoSettingsMenu,
     type CompositionGuide
 } from './overlays'
+import { VideoDisplayArea } from './VideoDisplayArea'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
 export interface CustomVideoPlayerRef {
@@ -541,39 +539,20 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
 
     return (
         <div ref={containerRef} className={`custom-video-player ${isPortrait ? 'portrait-video' : 'landscape-video'} ${!showControls ? 'controls-hidden' : ''} ${className}`}>
-            <video
+            {/* Memoized Video Display Area */}
+            <VideoDisplayArea
                 ref={videoRef}
                 src={src}
-                crossOrigin="anonymous"
-                playsInline
-                webkit-playsinline=""
-                preload="auto"
-                className="w-full h-auto bg-black"
-                style={isFullscreen ? {
-                    maxHeight: 'calc(100vh - 120px)',
-                    objectFit: 'contain'
-                } : undefined}
+                isFullscreen={isFullscreen}
+                isBuffering={isBuffering}
+                activeSafeZone={activeSafeZone}
+                activeGuides={activeGuides}
+                videoRatio={videoRatio}
+                guideColor={guideColor}
+                overlayOpacity={overlayOpacity}
                 onClick={togglePlayPause}
                 onDoubleClick={toggleFullscreen}
             />
-
-            {/* Loading Spinner */}
-            {isBuffering && (
-                <div className="loading-overlay">
-                    <Loader2 className="loading-spinner" />
-                </div>
-            )}
-
-            {/* Video Overlays (Safe Zone + Composition Guides) */}
-            <VideoOverlayContainer videoRef={videoRef}>
-                <SafeZoneOverlay safeZoneUrl={activeSafeZone} opacity={overlayOpacity} />
-                <CompositionOverlay
-                    activeGuides={activeGuides}
-                    videoRatio={videoRatio}
-                    color={guideColor}
-                    opacity={overlayOpacity}
-                />
-            </VideoOverlayContainer>
 
             {/* Hidden canvas for frame export */}
             <canvas ref={canvasRef} style={{ display: 'none' }} />
