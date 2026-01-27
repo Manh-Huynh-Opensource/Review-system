@@ -415,7 +415,6 @@ function MobileFileViewLayoutComponent({
                 <MobileViewToggle
                     activeView={activeView}
                     onViewChange={setActiveView}
-                    commentCount={comments.length}
                 />
             )}
         </div>

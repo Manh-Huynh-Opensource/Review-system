@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils'
 interface MobileViewToggleProps {
     activeView: 'file' | 'comments'
     onViewChange: (view: 'file' | 'comments') => void
-    commentCount?: number
 }
 
 /**
@@ -14,7 +13,6 @@ interface MobileViewToggleProps {
 export function MobileViewToggle({
     activeView,
     onViewChange,
-    commentCount = 0
 }: MobileViewToggleProps) {
     return (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t safe-area-pb">
@@ -46,12 +44,6 @@ export function MobileViewToggle({
                     >
                         <MessageSquare className="w-4 h-4" />
                         <span className="text-sm font-medium">Bình luận</span>
-                        {/* Badge for comment count */}
-                        {commentCount > 0 && activeView !== 'comments' && (
-                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center px-1">
-                                {commentCount > 99 ? '99+' : commentCount}
-                            </span>
-                        )}
                     </button>
                 </div>
             </div>
