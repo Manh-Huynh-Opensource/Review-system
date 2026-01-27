@@ -16,6 +16,7 @@ interface AttachmentPreview {
 interface AddCommentProps {
     onSubmit: (userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[], captureView?: boolean) => Promise<void>
     currentTimestamp?: number
+    currentTimestampRef?: React.MutableRefObject<number>
     showTimestamp?: boolean
     userName?: string
     onUserNameChange?: (name: string) => void
@@ -29,10 +30,12 @@ interface AddCommentProps {
 export function AddComment({
     onSubmit,
     currentTimestamp,
+    currentTimestampRef,
     showTimestamp = false,
     userName: initialUserName,
     onUserNameChange,
-    isSequence = false,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    isSequence: _isSequence = false,
     annotationData,
     onAnnotationClick,
     canCaptureView,
@@ -139,11 +142,21 @@ export function AddComment({
 
         setSubmitting(true)
         try {
+            // Use ref for timestamp if available to avoid re-renders
+            let finalTimestamp = undefined
+            if (showTimestamp) {
+                if (currentTimestampRef?.current !== undefined) {
+                    finalTimestamp = currentTimestampRef.current
+                } else {
+                    finalTimestamp = currentTimestamp
+                }
+            }
+
             const attachmentFiles = attachments.map(att => att.file)
             await onSubmit(
                 userName.trim(),
                 content.trim(),
-                showTimestamp ? currentTimestamp : undefined,
+                finalTimestamp,
                 undefined,
                 null, // annotationData is handled by parent
                 attachmentFiles.length > 0 ? attachmentFiles : undefined,
@@ -240,16 +253,6 @@ export function AddComment({
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault()
-    }
-
-    const formatTime = (seconds?: number) => {
-        if (seconds === undefined || seconds === null) return ''
-        if (isSequence) {
-            return `Frame ${Math.floor(seconds) + 1}`
-        }
-        const mins = Math.floor(seconds / 60)
-        const secs = Math.floor(seconds % 60)
-        return `${mins}:${secs.toString().padStart(2, '0')}`
     }
 
     const hasAnnotations = annotationData && annotationData.length > 0
@@ -408,7 +411,7 @@ export function AddComment({
                                 size="sm"
                                 variant={captureView ? 'secondary' : 'ghost'}
                                 onClick={() => setCaptureView(!captureView)}
-                                className={`h-8 px-2 ${!captureView ? 'text-muted-foreground hover:text-foreground' : ''}`}
+                                className={`h - 8 px - 2 ${!captureView ? 'text-muted-foreground hover:text-foreground' : ''} `}
                                 title={captureView ? 'Đã lưu góc nhìn' : 'Lưu góc nhìn hiện tại'}
                             >
                                 <Camera className="w-4 h-4 mr-1" />
@@ -423,7 +426,7 @@ export function AddComment({
                                 size="sm"
                                 variant={hasAnnotations ? 'secondary' : 'ghost'}
                                 onClick={onAnnotationClick}
-                                className={`h-8 px-2 ${!hasAnnotations ? 'text-muted-foreground hover:text-foreground' : ''}`}
+                                className={`h - 8 px - 2 ${!hasAnnotations ? 'text-muted-foreground hover:text-foreground' : ''} `}
                                 title={hasAnnotations ? `${annotationData.length} annotations` : 'Add annotation'}
                             >
                                 <PenTool className="w-4 h-4 mr-1" />
