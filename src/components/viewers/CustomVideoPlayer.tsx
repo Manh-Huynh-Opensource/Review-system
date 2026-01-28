@@ -226,8 +226,14 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [duration, togglePlayPause, toggleMute, toggleFullscreen, toggleLoop, togglePiP])
 
-    // Auto-hide controls - only hide when playing
+    // Auto-hide controls - only on desktop, disabled on mobile
     useEffect(() => {
+        // On mobile, always show controls - skip auto-hide entirely
+        if (isMobile) {
+            setShowControls(true)
+            return
+        }
+
         const resetControlsTimeout = () => {
             setShowControls(true)
             if (controlsTimeoutRef.current) {
@@ -273,7 +279,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                 clearTimeout(controlsTimeoutRef.current)
             }
         }
-    }, [isPlaying])
+    }, [isPlaying, isMobile])
 
     // Show controls when paused
     useEffect(() => {

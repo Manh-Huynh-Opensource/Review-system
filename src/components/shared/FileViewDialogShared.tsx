@@ -518,8 +518,9 @@ export function FileViewDialogShared({
       if (c.timestamp === null || c.timestamp === undefined) return false
 
       if (file.type === 'video') {
-        // Frame-accurate tolerance: 1 frame duration at current FPS
-        const frameTolerance = 1 / videoFps
+        // Frame-accurate tolerance: 3 frames duration for more forgiving matching
+        const effectiveFps = videoFps || 30  // Fallback to 30fps if not detected
+        const frameTolerance = 3 / effectiveFps  // ~100ms at 30fps
         return Math.abs(c.timestamp - currentTime) <= frameTolerance
       } else if (file.type === 'sequence') {
         // Exact frame match
