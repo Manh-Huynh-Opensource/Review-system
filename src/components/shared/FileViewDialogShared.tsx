@@ -276,8 +276,9 @@ export function FileViewDialogShared({
   })
 
   // Memoize video player callbacks to prevent CustomVideoPlayer re-renders
+  // IMPORTANT: Do NOT call setCurrentTime here - it causes parent re-render 10x/sec
+  // Only update ref during playback to avoid stutter on mobile Safari
   const handleTimeUpdate = useCallback((time: number) => {
-    setCurrentTime(time)
     currentTimeRef.current = time
   }, [])
 
